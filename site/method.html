@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en" data-chrome="light" data-theme="light">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <title>Method: how Flexion reads a hand</title>
+  <meta name="description" content="How Flexion measures a hand from a plain webcam: the fist reading, the form guards, the noise band (MDC95) and what counts as real change. With the validation numbers and the limits." />
+  <meta name="theme-color" content="#E3EBF0" />
+  <link rel="stylesheet" href="/fonts/fonts.css" />
+  <script type="module" src="/src/page.js"></script>
+</head>
+<body class="page">
+  <a class="skip-link" href="#method">Skip to content</a>
+  <header class="page-bar shell">
+    <a class="nav-mark" href="/" aria-label="Flexion, back to the site"><i></i><span>FLEXION</span></a>
+    <a class="cta cta-line" href="/#report">Back to the report</a>
+  </header>
+  <main id="method" class="shell method">
+    <p class="index mono">Method · how Flexion reads a hand</p>
+    <h1 class="piece-title">One honest number <em>per fist.</em></h1>
+    <p class="piece-lede">Flexion is a measurement aid, not a diagnosis. Everything below is what the code does today, with the numbers from our own validation runs. Values come from a consumer webcam, and your therapist stays in charge.</p>
+
+    <section aria-labelledby="m-what">
+      <h2 id="m-what">What we measure</h2>
+      <p>The camera finds 21 hand landmarks per frame (Google MediaPipe, running in your browser on the GPU). From them we take one headline reading: <b>the distance from the index fingertip to its knuckle, divided by the palm length</b> (wrist to middle-finger knuckle). Dividing by your own palm makes the number independent of how close you sit. Lower means a tighter fist.</p>
+      <p>Each capture is the median of a steady window: the pose has to hold for 0.7 s (about 20 camera frames) before it counts, so one blurry frame can’t move the result.</p>
+      <dl class="method-facts">
+        <div><dt>Open hand</dt><dd>0.766</dd></div>
+        <div><dt>Fist</dt><dd>0.183</dd></div>
+        <div><dt>Fist closure</dt><dd class="formula">1 − fist ÷ open</dd></div>
+      </dl>
+      <p class="method-note">Validation run 4, 20 October 2026, one adult right hand: the open and fist readings above are that run’s medians. The weekly report draws one gauge per day from the fist closure.</p>
+    </section>
+
+    <section aria-labelledby="m-form">
+      <h2 id="m-form">Form guards</h2>
+      <p>A 2D camera can be fooled, so the coach refuses a capture until the form is right, and says what to fix:</p>
+      <ul>
+        <li><b>Palm to the camera.</b> If the knuckle width drops below 0.45 × the palm length, the hand is side-on and 2D distances lie. Cue: "Turn your palm to face me."</li>
+        <li><b>Thumb outside.</b> If the thumb tip is closer than 0.6 × the palm to the little-finger knuckle, the thumb is tucked inside and the fingers can’t close. Cue: "Thumb across the outside." Tucked thumbs tripled the noise in run 3; the guard brought it back down in run 4.</li>
+      </ul>
+    </section>
+
+    <section aria-labelledby="m-noise">
+      <h2 id="m-noise">The noise band (MDC95)</h2>
+      <p>Make the same fist ten times and the reading still wobbles. In run 4 the ten re-formed fists had a standard deviation of 0.023. The <b>minimal detectable change at 95 % confidence</b> is 1.96 × √2 × SD = <b>0.063</b>, which is <b>10.7 %</b> of the open-to-fist range. A day inside your usual reading ± 0.063 is normal day-to-day noise; only a change beyond it is called real.</p>
+      <ul>
+        <li><b>Your usual</b> is the median of your earlier sessions. Flexion needs at least 3 before it calls any change.</li>
+        <li><b>A flare</b> is two days in a row looser than your usual by more than the band. The coach then asks whether to switch to the gentle routine, and nothing changes until you say yes.</li>
+        <li><b>Progress</b> only rises after 3 complete, pain-free sessions and a week at the same level, by at most 10 %, and never past the limit on your therapist’s sheet.</li>
+      </ul>
+    </section>
+
+    <section aria-labelledby="m-limits">
+      <h2 id="m-limits">Limits, said plainly</h2>
+      <ul>
+        <li>The guard thresholds and the noise band come from one person’s right hand. They need more people before they mean anything general.</li>
+        <li>The MDC95 uses the spread of repeat trials as the measurement error, a shortcut; a test-retest study (ICC-based) should replace it.</li>
+        <li>These are ratios of a 2D image, not joint angles, which is why the site never shows degrees.</li>
+        <li>Speed: 30 fps from a laptop webcam in Chrome; 3–5 ms per frame for the landmarks alone (Day-1 gate G1), 7–12 ms with gesture recognition (the current engine).</li>
+      </ul>
+    </section>
+
+    <section aria-labelledby="m-privacy">
+      <h2 id="m-privacy">What leaves your device</h2>
+      <p>The video never leaves your browser tab. Only the numbers of a finished session (readings, reps, the grip result, form fixes) are saved, under an opaque user id with no name.</p>
+    </section>
+  </main>
+  <footer class="shell footer-bar mono-tight"><span>© 2026 Flexion. All ranges reserved.</span><a href="/">Back to the reading ↑</a></footer>
+</body>
+</html>

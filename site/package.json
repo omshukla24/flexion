@@ -1,0 +1,22 @@
+{
+  "name": "flexion-site",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "node --test \"tests/*.test.js\"",
+    "film:demo": "ffmpeg -y -f lavfi -i mandelbrot=s=1280x720:rate=30 -t 6 -c:v libx264 -g 1 -crf 26 -pix_fmt yuv420p -movflags +faststart -an public/film.mp4"
+  },
+  "dependencies": {
+    "gsap": "^3.15.0",
+    "lenis": "^1.3.26",
+    "three": "^0.186.1"
+  },
+  "devDependencies": {
+    "vite": "^8.3.1"
+  },
+  "license": "Apache-2.0"
+}

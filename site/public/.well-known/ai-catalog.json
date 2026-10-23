@@ -1,0 +1,20 @@
+{
+  "specVersion": "1.0",
+  "entries": [
+    {
+      "identifier": "urn:air:flexion:mcp:flexion-coach",
+      "displayName": "Flexion hand-therapy coach (MCP server)",
+      "description": "Remote MCP server behind Flexion's Alexa+ experience: start a camera hand check, read progress against the user's usual range, and build the weekly report for the therapist.",
+      "type": "application/mcp-server-card+json",
+      "data": {
+        "name": "flexion",
+        "title": "Flexion hand-therapy coach",
+        "description": "Start a hand check, get progress, build the weekly report.",
+        "url": "https://ajsz3ao7tetyacjcyputpsz2mm0edogp.lambda-url.us-east-1.on.aws/mcp",
+        "transport": "streamable-http",
+        "tools": ["start_hand_check", "get_progress", "weekly_report"]
+      },
+      "representativeQueries": ["check my right hand", "how is my left hand doing", "send my therapist this week's report"]
+    }
+  ]
+}

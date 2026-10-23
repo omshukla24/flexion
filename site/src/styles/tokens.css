@@ -1,0 +1,45 @@
+/* Flexion site tokens. Values come from the shared lock (server/app/tokens.css,
+   the design system); this file only maps them onto the base names. */
+@import '../../../server/app/tokens.css';
+
+:root {
+  color-scheme: light;
+  /* Base names -> Flexion: void = night scenes, bone = light text on night,
+     ink = text on light, paper = the window ground. */
+  --void: #0D1520;
+  --bone: #E3EBF0;
+  --paper: #E3EBF0;
+  --mist: #98A9B9;
+  --dim: #6B7C8D;
+  --accent: #E0457B;
+  --accent-deep: #B02358;
+  --accent-pale: #F5B6CB;
+  --hair-dark: rgb(229 236 241 / 0.1);
+  --hair-dark-bright: rgb(229 236 241 / 0.24);
+  --hair-light: rgb(15 27 45 / 0.14);
+
+  --step-hero: clamp(64px, 13vw, 232px);
+  --step-h2: clamp(34px, min(5.2vw, 9vh), 84px); /* short windows shrink it too */
+  --step-h3: clamp(20px, 2.4vw, 38px);
+  --step-body: clamp(16px, 1.2vw, 19px);
+
+  --ease-emergence: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-orbital: cubic-bezier(0.83, 0, 0.17, 1);
+  --dur-base: 0.9s;
+
+  --gutter: clamp(16px, 5vw, 96px);
+  --measure: 1320px;
+  --nav-h: 72px;
+  --stack-radius: clamp(24px, 3vw, 46px);
+  --stack-overlap: clamp(-46px, -3vw, -24px);
+
+  --z-webgl: 0;
+  --z-scene: 10;
+  --z-rail: 90;
+  --z-nav: 100;
+  --z-cursor: 150;
+  --z-preloader: 200;
+}
+
+@media (max-width: 900px) { :root { --nav-h: 62px; } }
+@media (max-width: 560px) { :root { --nav-h: 56px; } }

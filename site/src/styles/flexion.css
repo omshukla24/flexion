@@ -1,0 +1,402 @@
+/* Flexion layer over the base styles: window-light hero, night sections, HUD. */
+html { background: var(--ground); color-scheme: light; }
+body { background: var(--ground); color: var(--ink); font-family: var(--font-body); }
+.mono, .mono-tight { font-family: var(--font-mono); }
+
+/* Preloader: the window, counting landmarks. */
+.preloader { background: var(--ground); color: var(--ink); }
+.preloader-mark { border-color: var(--ink); }
+.preloader-line { background: var(--hair-light); }
+.preloader-status { color: var(--muted); }
+.preloader-status b { color: var(--ink); }
+.preloader-count { font: 600 12px/1 var(--font-mono); letter-spacing: 0.2em; color: var(--muted); }
+
+/* Hero: The Reading */
+.hero { position: relative; height: 320vh; background: var(--ground); }
+.hero-sticky { position: sticky; top: 0; height: 100vh; height: 100svh; overflow: hidden; }
+.hero-canvas { position: absolute; inset: 0; z-index: var(--z-webgl); }
+.hero-canvas canvas { width: 100%; height: 100%; touch-action: pan-y; outline: none; }
+.hero-canvas canvas:focus-visible { outline: 3px solid var(--rose); outline-offset: -6px; }
+.hero-canvas.no-webgl { background: var(--ground); }
+.hero-veil { position: absolute; inset: 0; pointer-events: none; background: var(--void); opacity: 0; } /* the joint dive turns it night */
+
+.hero-copy { position: absolute; left: var(--gutter); bottom: clamp(28px, 6vh, 72px); z-index: var(--z-scene); max-width: min(46rem, 60vw); pointer-events: none;
+  display: block; justify-items: start; text-align: left; padding: 0; } /* Chrome aligns block children by justify-items too */
+.hero-title { font-size: 1rem; }
+.hero-copy a, .hero-copy button { pointer-events: auto; }
+.hero-eyebrow { color: var(--muted); letter-spacing: 0.24em; margin-bottom: clamp(14px, 2vh, 24px); display: flex; gap: 14px; align-items: center; }
+.hero-eyebrow i { width: 28px; height: 3px; background: var(--rose); }
+.hero-title { font-family: var(--font-display); font-weight: 540; line-height: var(--leading-display); letter-spacing: -0.02em; color: var(--ink); }
+.wordmark { display: block; font-size: var(--step-hero); font-variation-settings: var(--flex-open); margin-left: -0.04em; white-space: nowrap; }
+.hero-title .line { display: block; overflow: hidden; padding-bottom: 0.08em; margin-bottom: -0.08em; }
+.hero-title .line > span { display: block; }
+.tagline { display: block; font-size: clamp(22px, 2.6vw, 44px); font-weight: 430; font-variation-settings: "wdth" 96; letter-spacing: -0.01em; margin-top: 0.35em; }
+.hero-sub { margin: clamp(14px, 2vh, 22px) 0 0; max-width: 40ch; color: var(--muted); font-size: var(--step-body); line-height: 1.55; font-weight: 400; }
+.hero-ctas { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 12px; margin-top: clamp(18px, 2.6vh, 28px); }
+.cta-rose { background: var(--rose-ink); color: var(--on-rose); font-weight: 700; }
+.cta-line { box-shadow: inset 0 0 0 1px var(--ink); color: var(--ink); }
+
+/* HUD: live readings, 3-digit, tabular. */
+.hud { position: absolute; left: var(--gutter); top: calc(var(--nav-h) + clamp(16px, 4vh, 40px)); z-index: var(--z-scene); width: min(300px, 40vw);
+  font: 600 11px/1 var(--font-mono); letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); pointer-events: none; }
+.hud-head { display: flex; justify-content: space-between; padding-bottom: 10px; border-bottom: 1px solid var(--hair-light); }
+.hud-row { display: grid; grid-template-columns: 64px 1fr 44px; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--hair-light); }
+.hud-row b { color: var(--ink); font-size: 13px; text-align: right; font-variant-numeric: tabular-nums; }
+.hud-bar { height: 3px; background: var(--hair-light); position: relative; }
+.hud-bar i { position: absolute; inset: 0 auto 0 0; width: 0; background: var(--rose); }
+.hud-bar s { position: absolute; top: -3px; bottom: -3px; width: 2px; left: 85%; background: var(--ink); }
+.hud-foot { display: flex; justify-content: space-between; padding-top: 10px; }
+.hud-foot b { color: var(--rose-ink); font-variant-numeric: tabular-nums; }
+
+/* Landmark callouts pinned to 3D joints. */
+.anchor { position: absolute; left: 0; top: 0; z-index: var(--z-scene); pointer-events: none; will-change: transform; }
+.anchor span { position: absolute; left: 14px; top: -22px; white-space: nowrap; font: 600 10px/1 var(--font-mono); letter-spacing: 0.18em; color: var(--ink);
+  padding: 6px 8px 6px 10px; background: var(--surface); clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%); }
+.anchor::before { content: ''; position: absolute; left: -4px; top: -4px; width: 8px; height: 8px; border-radius: 50%; border: 2px solid var(--rose); }
+
+.hero-hint { position: absolute; left: auto; translate: none; right: var(--gutter); bottom: clamp(28px, 6vh, 72px); z-index: var(--z-scene); display: grid; justify-items: end; gap: 8px; color: var(--muted); font-size: 10px; }
+
+/* Night section */
+.night { background: var(--void); color: var(--bone); }
+.section-pad { padding: clamp(96px, 16vh, 200px) 0; }
+.shell { width: min(100% - 2 * var(--gutter), var(--measure)); margin: 0 auto; }
+.index { color: var(--muted); } /* 5.9:1 on the window ground; night sections switch to --mist below */
+.night .index { color: var(--mist); }
+.manifesto { font-family: var(--font-display); font-size: var(--step-h2); font-weight: 520; line-height: 1.02; letter-spacing: -0.02em; max-width: 18ch; }
+.manifesto em { font-style: normal; color: var(--rose-night); font-variation-settings: "wdth" 70, "wght" 760; }
+.night .lede { color: var(--mist); font-weight: 400; }
+.facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; margin-top: clamp(48px, 8vh, 96px); background: var(--hair-dark); }
+.facts > div { background: var(--void); padding: 28px 24px 32px; display: grid; gap: 12px; }
+.facts .num { font: 700 clamp(40px, 5vw, 72px)/1 var(--font-mono); color: var(--bone); font-variant-numeric: tabular-nums; }
+.facts .num small { font-size: 0.4em; color: var(--mist); margin-left: 4px; }
+.facts p:last-child { color: var(--mist); font-size: 15px; }
+
+/* Sign-off: the wordmark flexes like a hand (tokens --flex-open / --flex-fist); flex-word.js curls letters near the pointer. */
+.sign-off { padding: clamp(48px, 9vh, 112px) 0 clamp(16px, 3vh, 32px); border-top: 1px solid var(--hair-dark); overflow: hidden; }
+.sign-off-word { display: flex; justify-content: space-between; margin: 0 var(--gutter); font: 400 clamp(64px, 16vw, 420px)/0.8 var(--font-display);
+  font-variation-settings: var(--flex-open); text-transform: uppercase; color: var(--bone); user-select: none; }
+.sign-off-word span { display: block; flex: none; text-align: center; contain: layout size style; color: color-mix(in oklab, var(--rose-night) calc(var(--k, 0) * 100%), var(--bone)); }
+.foot .shell { width: auto; max-width: none; margin-inline: var(--gutter); padding: 0; } /* same left edge as the wordmark */
+.sign-off-line { margin: clamp(28px, 4.5vh, 64px) var(--gutter) 0; max-width: 40ch; color: var(--mist); font-size: clamp(16px, 1.3vw, 20px); }
+.footer-bar { display: flex; justify-content: space-between; gap: 16px; padding: 24px 0 32px; color: var(--mist); flex-wrap: wrap; }
+
+/* Short laptop screens: the hero copy rises from the bottom and the HUD hangs from the top, so keep them apart. */
+@media (min-width: 901px) and (max-height: 820px) {
+  .wordmark { font-size: min(var(--step-hero), 19vh); }
+  .hud-row { display: none; } /* header + today's peak only, as on phones: the rows ran into the greeting (1280x720) */
+}
+@media (min-width: 901px) and (max-height: 680px) {
+  .hero-sub { display: none; }
+  .hud-row { display: none; } /* the header and today's peak stay, as on phones */
+}
+@media (max-width: 900px) {
+  .hero { height: 240vh; }
+  .hero-copy { max-width: none; right: var(--gutter); bottom: calc(var(--nav-h) + 20px + env(safe-area-inset-bottom, 0px)); } /* clear of the dock */
+  .hud { width: auto; left: var(--gutter); top: calc(var(--nav-h) + 12px); }
+  .hud-row { padding: 5px 0; }
+  .hero-hint, .anchor { display: none; }
+  .facts { grid-template-columns: 1fr; }
+}
+/* Set-piece sections: a sticky stage with the scene full-bleed, copy and a readout on top. */
+.piece { position: relative; height: 240vh; background: var(--ground); color: var(--ink); }
+.piece.night { background: var(--void); color: var(--bone); }
+.piece-sticky { position: sticky; top: 0; height: 100vh; height: 100svh; overflow: hidden; }
+.piece-sticky > canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: pan-y; outline: none; }
+.piece-sticky > canvas:focus-visible { outline: 3px solid var(--rose); outline-offset: -6px; }
+/* Copy on top, readout at the bottom of one column: a flex column, so the two can never overlap. */
+.piece-col { position: absolute; left: var(--gutter); top: calc(var(--nav-h) + clamp(20px, 5vh, 56px)); bottom: clamp(24px, 6vh, 64px); width: min(34rem, 42vw);
+  z-index: var(--z-scene); display: flex; flex-direction: column; justify-content: space-between; gap: 24px; pointer-events: none; }
+.piece-copy { pointer-events: none; }
+.piece-title { font-family: var(--font-display); font-size: clamp(32px, min(4.2vw, 7.5vh), 68px); font-weight: 520; line-height: 1.02; letter-spacing: -0.02em; margin-top: 14px; }
+.piece-title em { font-style: normal; color: var(--rose-ink); font-variation-settings: "wdth" 72, "wght" 760; }
+.night .piece-title em { color: var(--rose-night); }
+.piece-lede { margin-top: clamp(16px, 2.4vh, 28px); max-width: 44ch; color: var(--muted); line-height: 1.55; }
+.night .piece-lede, .night .index { color: var(--mist); }
+.readout { flex: none; pointer-events: auto; width: min(330px, 100%); padding: 18px 20px 20px;
+  background: var(--acrylic); backdrop-filter: blur(12px) saturate(1.2); border-radius: var(--r-acrylic); box-shadow: inset 0 1px 0 var(--acrylic-edge), 0 0 0 1px var(--hair-light); display: grid; gap: 8px; }
+.night .readout { background: rgb(22 34 47 / 0.72); box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.12), 0 0 0 1px var(--hair-dark); }
+.readout .mono-tight { color: var(--muted); }
+.night .readout .mono-tight { color: var(--mist); }
+.readout-val { display: flex; align-items: baseline; gap: 10px; }
+.readout-val b { font: 700 clamp(36px, 4vw, 56px)/1 var(--font-mono); font-variant-numeric: tabular-nums; }
+.readout-val small { font: 600 12px/1 var(--font-mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+.night .readout-val small { color: var(--mist); }
+.readout-verdict { font-weight: 700; font-size: 18px; }
+.readout-verdict[data-tone='ok'] { color: var(--ok); }
+.readout-verdict[data-tone='care'] { color: var(--care); }
+.night .readout-verdict[data-tone='ok'] { color: #4CD3A0; }
+.night .readout-verdict[data-tone='care'] { color: var(--care-fill); }
+.ask { display: grid; gap: 10px; padding-top: 10px; border-top: 1px solid var(--hair-light); }
+.ask[hidden] { display: none; }
+.ask p { font-size: 15px; line-height: 1.45; }
+.ask-btns { display: flex; flex-wrap: wrap; gap: 8px; }
+.ask-btns .cta { padding: 10px 14px; font-size: 14px; }
+.flag-anchor span { left: auto; right: 12px; top: -30px; } /* label sits left of the post, never off-screen */
+.foot { padding-top: clamp(48px, 8vh, 96px); }
+.link-btn { background: none; border: 0; padding: 0; font: inherit; letter-spacing: inherit; text-transform: inherit; color: inherit; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.motion-paused body::after { animation: none; } /* the grain stops too */
+
+/* Cross-page View Transitions: the FLEXION mark travels between the site, the method and the 404. */
+@view-transition { navigation: auto; }
+.nav-mark { view-transition-name: brand; }
+@media (prefers-reduced-motion: reduce) { @view-transition { navigation: none; } }
+
+/* Quiet pages: method, 404. */
+.page { background: var(--ground); color: var(--ink); }
+.page-bar { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 22px 0; }
+.page-bar .nav-mark { position: static; }
+.method { padding: clamp(32px, 6vh, 72px) 0 clamp(56px, 10vh, 120px); max-width: 780px; }
+.method .piece-title { margin: 14px 0 0; }
+.method h2 { font-family: var(--font-display); font-size: clamp(24px, 2.6vw, 34px); font-weight: 560; letter-spacing: -0.01em; margin: clamp(40px, 7vh, 64px) 0 12px; }
+.method p, .method li { max-width: 66ch; line-height: 1.6; }
+.method ul { padding-left: 1.2em; display: grid; gap: 10px; margin: 12px 0 0; }
+.method section > p + p { margin-top: 12px; }
+.method-facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; margin: 24px 0 10px; background: var(--hair-light); border-radius: var(--r-acrylic); overflow: hidden; }
+.method-facts div { background: var(--surface); padding: 16px 18px; display: grid; gap: 6px; }
+.method-facts dt { font: 600 11px/1 var(--font-mono); letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); }
+.method-facts dd { margin: 0; font: 700 clamp(20px, 2.4vw, 30px)/1.1 var(--font-mono); font-variant-numeric: tabular-nums; }
+.method-facts dd.formula { font-size: clamp(16px, 1.7vw, 21px); }
+.method-note { color: var(--muted); font-size: 15px; }
+.missing { min-height: 60vh; display: grid; align-content: center; gap: 18px; }
+@media (max-width: 560px) { .method-facts { grid-template-columns: 1fr; } }
+
+/* Web Interface Guidelines pass (2026-10-21): balanced headings, no double-tap zoom delay, 44 px touch targets. */
+.manifesto, .piece-title, .tagline { text-wrap: balance; }
+a, button, canvas { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+@media (pointer: coarse) { .footer-bar a, .footer-bar .link-btn { min-height: 44px; display: inline-flex; align-items: center; } }
+
+/* Section index gauge: a single arc whose needle reads how far down the page this section sits, as % curl. */
+.index[data-gauge] { display: flex; align-items: center; gap: 10px; }
+.index svg { width: 26px; height: 15px; flex: none; overflow: visible; }
+.index svg path { fill: none; stroke: currentColor; stroke-width: 1.4; opacity: 0.55; }
+.index svg line { stroke: var(--rose-ink); stroke-width: 2; stroke-linecap: round; }
+.night .index svg line, .live .index svg line { stroke: var(--rose-night); }
+
+/* Seams: fixed overlays under the nav, shown only mid-transition (core/seams.js). */
+.seam { position: fixed; inset: 0; z-index: calc(var(--z-nav) - 5); pointer-events: none; visibility: hidden; overflow: hidden; }
+.reduced-motion .seam { background: var(--cover); }
+.reduced-motion .seam > * { display: none; }
+/* 1→2 Joint dive */
+.seam-dive { --cover: var(--void); }
+.dive-disc { position: absolute; inset: 0; clip-path: circle(0 at 50% 45%); }
+.dive-rose { background: var(--rose); }
+.dive-night { background: var(--void); }
+/* 3→4 Goniometer sweep: the fill is a half-plane hinged on the bottom-left corner. */
+.seam-sweep { --cover: var(--ground); }
+.sweep-hold { position: absolute; inset: 0; background: var(--void); transform: translateY(100%); will-change: transform; }
+.sweep-fill { position: absolute; left: 0; top: calc(100% - 200vmax); width: 300vmax; height: 400vmax; transform-origin: 0 200vmax; transform: rotate(90deg); background: var(--ground); overflow: hidden; will-change: transform; }
+.sweep-print { position: absolute; left: 0; top: 200vmax; transform-origin: 0 0; will-change: transform; }
+.sweep-ring { position: absolute; left: -42vmin; top: -42vmin; width: 84vmin; height: 84vmin; border-radius: 50%; opacity: 0.6;
+  background: repeating-conic-gradient(from 0deg, var(--ink) 0 0.3deg, transparent 0.3deg 9deg);
+  -webkit-mask: radial-gradient(circle closest-side, transparent 90%, #000 91%); mask: radial-gradient(circle closest-side, transparent 90%, #000 91%); }
+.sweep-print b { position: absolute; left: calc(sin(var(--t)) * 47vmin); top: calc(cos(var(--t)) * -47vmin); translate: -50% -50%; font: 600 12px/1 var(--font-mono); letter-spacing: 0.16em; color: var(--ink); }
+.sweep-arm { position: absolute; left: -1.5px; bottom: 0; width: 3px; height: 200vmax; background: var(--rose); transform-origin: 50% 100%; transform: rotate(90deg); will-change: transform; }
+.sweep-hub { position: absolute; left: -15px; bottom: -15px; width: 30px; height: 30px; border-radius: 50%; background: var(--ink); box-shadow: 0 0 0 4px var(--rose); }
+/* 6→7 Fist wipe: five finger bands close over the screen, little finger first, then open. */
+.fist-wipe { --cover: var(--void); display: grid; grid-template-columns: repeat(5, 1fr); }
+.fist-wipe i { position: relative; background: var(--void); border-radius: 0 0 999px 999px; box-shadow: inset 0 -4px 0 var(--tip, var(--rose)); }
+.fist-wipe i::after { content: ''; position: absolute; left: 32%; right: 32%; bottom: 18px; height: clamp(26px, 6vh, 60px); border-radius: 999px; background: rgb(255 255 255 / 0.07); } /* the nail */
+/* 0→1 Landmark punch: once the holes start, the masked rect paints the loader's ground. */
+.preloader.is-punching { background: none; }
+.punch { position: absolute; inset: 0; width: 100%; height: 100%; }
+.punch-ground { fill: var(--ground); }
+.punch-ring { fill: none; stroke: var(--rose); stroke-width: 2; }
+.punch-dot { fill: var(--rose); }
+/* 2→3 Hatch sweep: the MDC95 hatch on night, led by a rose edge. */
+.seam-hatch { --cover: var(--void); }
+.hatch-cover { position: absolute; inset: 0; transform: translateX(-100%); will-change: transform; background: repeating-linear-gradient(135deg, transparent 0 11px, rgb(152 169 185 / 0.28) 11px 12px), var(--void); }
+.hatch-edge { position: absolute; top: 0; bottom: 0; left: -1.5px; width: 3px; background: var(--rose-night); will-change: transform; }
+/* 4→5 Tape on, tape off: night tape with the wave print and a rose edge; angled cut ends. */
+.seam-tape { --cover: var(--ground); }
+.tape { position: absolute; left: -15vw; width: 130vw; height: 19vh; border-top: 3px solid var(--rose); will-change: transform;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='40'%3E%3Cpath d='M0 20 Q15 6 30 20 T60 20 T90 20 T120 20' fill='none' stroke='%23E5ECF1' stroke-opacity='.09' stroke-width='2'/%3E%3C/svg%3E") 0 0 / 120px 40px, var(--void);
+  clip-path: polygon(2.5% 0, 100% 0, 97.5% 100%, 0 100%); }
+.tape:nth-child(1) { top: 9vh; rotate: -4deg; }
+.tape:nth-child(2) { top: 41vh; rotate: 3deg; }
+.tape:nth-child(3) { top: 71vh; rotate: -2deg; }
+/* 5→6 Print feed: an ink print head with a rose LED lays a paper page in bands; crop marks snap in. */
+.seam-print { --cover: var(--ground); }
+.print-page { position: absolute; inset: 0; clip-path: inset(0 0 100% 0); background: repeating-linear-gradient(0deg, transparent 0 5px, rgb(15 27 45 / 0.035) 5px 6px), #F0F4F7; } /* raster lines; a soft white, no glare */
+.print-head { position: absolute; left: 0; right: 0; top: -7px; height: 14px; background: var(--ink); box-shadow: 0 6px 18px rgb(15 27 45 / 0.18); will-change: transform; }
+.print-head b { position: absolute; right: 8%; top: 4px; width: 6px; height: 6px; border-radius: 50%; background: var(--rose); box-shadow: 0 0 0 3px rgb(224 69 123 / 0.25); }
+.crop { position: absolute; width: 26px; height: 26px; border: 0 solid var(--ink); opacity: 0; }
+.crop:nth-of-type(2) { left: 24px; top: 24px; border-width: 2px 0 0 2px; }
+.crop:nth-of-type(3) { right: 24px; top: 24px; border-width: 2px 2px 0 0; }
+.crop:nth-of-type(4) { left: 24px; bottom: 24px; border-width: 0 0 2px 2px; }
+.crop:nth-of-type(5) { right: 24px; bottom: 24px; border-width: 0 2px 2px 0; }
+
+/* Heading reveals (core/headings.js): one way per section. */
+.c { display: inline-block; }
+.reveal-squash .w-wrap { overflow: visible; }
+.reveal-print { position: relative; }
+.type-caret { position: absolute; width: 0.07em; background: var(--rose-ink); pointer-events: none; }
+.draw-line { --u: 1; --t: 1; background: repeating-linear-gradient(90deg, var(--ink) 0 0.3em, transparent 0.3em 0.48em) 0 100% / calc(var(--u) * 100%) 0.06em no-repeat;
+  -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+.draw-line::after { content: ''; display: inline-block; width: 0.4em; height: 0.72em; margin-left: 0.08em; vertical-align: -0.02em; transform: scaleY(var(--t)); transform-origin: 50% 100%;
+  background: linear-gradient(var(--ink) 0 0) 50% 0 / 100% 0.06em no-repeat, linear-gradient(var(--ink) 0 0) 50% 0 / 0.06em 100% no-repeat; } /* the therapist's T flag */
+
+/* Cursor needle hub + click peak tick (core/cursor.js). */
+.cursor-hub { position: fixed; left: 0; top: 0; width: 0; height: 0; pointer-events: none; z-index: var(--z-cursor); }
+.cursor-hub i { position: absolute; left: -1px; bottom: 0; width: 2px; height: 20px; border-radius: 1px; background: var(--chrome, var(--rose)); transform-origin: 50% 100%; rotate: -45deg; }
+.cursor-tick { position: fixed; left: 0; top: 0; width: 2px; height: 11px; background: var(--bone); mix-blend-mode: difference; pointer-events: none; z-index: var(--z-cursor); }
+
+/* Footer hand (core/wave-hand.js): the tracker's 21 landmarks, waving once. */
+.wave-hand { width: 2.4em; height: 2.4em; vertical-align: -0.8em; margin-right: 0.55em; overflow: visible; }
+.wave-bone { stroke: var(--mist); stroke-width: 1.4; stroke-linecap: round; }
+.wave-joint { fill: var(--void); stroke: var(--rose-night); stroke-width: 1.2; }
+.wave-joint.is-tip { fill: var(--rose-night); }
+
+/* Site ↔ /method, /404: page turn. The old page lifts off like a sheet from a clipboard; the new one slides up. */
+@media (prefers-reduced-motion: no-preference) {
+  ::view-transition-old(root) { animation: 0.6s cubic-bezier(0.83, 0, 0.17, 1) both page-lift; transform-origin: 50% 0; z-index: 1; }
+  ::view-transition-new(root) { animation: 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.15s both page-in; }
+}
+@keyframes page-lift { to { transform: perspective(1600px) rotateX(18deg) translateY(-14%) scale(0.92); opacity: 0; } }
+@keyframes page-in { from { transform: translateY(10%); opacity: 0; } }
+
+/* v4 (2026-10-21, fewer colours): two grounds only, window (light) and night; rose is the one accent. */
+
+/* 05 The Grip: the putty's colour stays on the putty; the ladder shows where you are. */
+.grip { height: 200vh; }
+.ladder { list-style: none; margin: 2px 0 0; padding: 0; display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.ladder li { height: 10px; border-radius: 5px; background: var(--c); opacity: 0.4; transition: opacity var(--dur-micro, 140ms); }
+.ladder li[aria-current='true'] { opacity: 1; box-shadow: 0 0 0 2px var(--surface), 0 0 0 3px var(--ink); }
+
+/* 06 The Monday Report: a printed page, in the PDF's own coordinates. */
+.piece#report { height: 220vh; }
+.paper-stage { position: absolute; z-index: var(--z-webgl); top: calc(var(--nav-h) + 28px); bottom: 16px; right: var(--gutter); width: min(52vw, calc((100svh - var(--nav-h) - 24px) * 0.79)); display: grid; place-items: center; }
+.paper { width: 100%; height: auto; max-height: 100%; overflow: visible; font-family: var(--font-body); }
+/* A one-check report tucked under the weekly page, filling the desk between the copy and the paper on wide screens
+   (no empty desk). main.js places it, or hides it where it doesn't fit. */
+.session-sheet { position: absolute; z-index: var(--z-webgl); display: block; transform-origin: 70% 80%; visibility: hidden; /* GSAP slides it out */
+  transition: translate 0.4s var(--ease-out), filter 0.4s; filter: drop-shadow(0 24px 40px rgb(15 27 45 / 0.16)); }
+.session-sheet[hidden] { display: none; }
+.session-sheet:hover, .session-sheet:focus-visible { translate: 0 -8px; filter: drop-shadow(0 32px 48px rgb(15 27 45 / 0.22)); }
+.session-sheet:focus-visible { outline: 3px solid var(--rose); outline-offset: 6px; }
+.session-sheet img { display: block; width: 100%; height: 100%; background: #FFFFFF; }
+.session-sheet-tag { position: absolute; left: 0; bottom: calc(100% + 10px); font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+.reduced-motion .session-sheet { transition: none; }
+.paper .sheet { fill: #FFFFFF; }
+.paper .shadow { fill: rgb(15 27 45 / 0.2); }
+.paper .crop line { stroke: var(--ink); stroke-width: 0.8; }
+.paper text { fill: var(--ink); font-size: 10px; }
+.paper .b { font-weight: 700; }
+.paper .mute { fill: var(--muted); }
+.paper .care { fill: var(--care); }
+.paper .ok { fill: var(--ok); }
+.paper .end { text-anchor: end; }
+.paper .s8 { font-size: 8px; } .paper .s9 { font-size: 9px; } .paper .s10 { font-size: 10px; } .paper .s11 { font-size: 11px; } .paper .s12 { font-size: 12px; } .paper .s22 { font-size: 22px; }
+.paper .rule { stroke: var(--ink); stroke-width: 1; }
+.paper .hair { stroke: var(--line); stroke-width: 0.75; }
+.paper .arc { fill: none; stroke: var(--ink); stroke-width: 0.6; }
+.paper .tick { stroke: var(--ink); stroke-width: 0.5; }
+.paper .band-arc { fill: none; stroke: var(--line); stroke-width: 6; }
+.paper .usual { stroke: var(--muted); stroke-width: 1; }
+.paper .needle { stroke: var(--rose); stroke-width: 1.8; stroke-linecap: round; }
+.paper .needle.care, .paper .hub.care { stroke: var(--care); fill: var(--care); }
+.paper .hub { fill: var(--rose); }
+.paper .band { fill: var(--ground); }
+.paper .axis { stroke: var(--ink); stroke-width: 0.75; }
+.paper .trend { fill: none; stroke: var(--rose); stroke-width: 1; }
+.paper .dot { fill: var(--rose); }
+.paper .sign { stroke: var(--ink); stroke-width: 0.9; }
+.piece#report .readout .cta { justify-self: start; margin-top: 4px; }
+
+/* 07 Try it live: night, your camera, nothing uploaded; the rose button is the scene's one accent. */
+.live { position: relative; background: var(--void); color: var(--bone); padding: clamp(96px, 14vh, 180px) 0 clamp(72px, 12vh, 140px); }
+.live .index, .live .piece-lede { color: var(--mist); }
+.live .piece-title em { color: var(--rose-night); font-variation-settings: "wdth" 72, "wght" 760; }
+/* The camera is the point of this section : a wider row than
+   the site's measure, most of it for the stage, which stays short enough to fit one screen. */
+.live-grid { display: grid; grid-template-columns: minmax(300px, 0.62fr) minmax(0, 1.38fr); gap: clamp(28px, 4vw, 64px); align-items: center;
+  width: auto; max-width: none; margin-inline: var(--gutter); padding: 0; } /* left edge = every other page's copy */
+.live-actions { display: grid; gap: 14px; margin-top: clamp(20px, 3vh, 32px); justify-items: start; }
+.cta-rose:disabled { opacity: 0.7; cursor: progress; }
+.live-privacy { max-width: 42ch; color: var(--mist); font-size: 15px; line-height: 1.5; padding-left: 14px; box-shadow: inset 2px 0 0 var(--hair-dark-bright); }
+.live-stage { position: relative; margin: 0; aspect-ratio: 4 / 3; width: min(100%, calc((100svh - 150px) * 4 / 3)); justify-self: end; border-radius: var(--r-acrylic); overflow: hidden; background: #16222F; box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.12), 0 0 0 1px var(--hair-dark); }
+.live-stage video, .live-stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+.live-stage video { opacity: 0; transition: opacity var(--dur-base); }
+.is-live .live-stage video { opacity: 1; }
+.live-note { position: absolute; inset: 0; display: grid; place-items: center; padding: 24px; text-align: center; font-size: 18px; color: rgb(255 255 255 / 0.9); }
+.live-note[hidden] { display: none; }
+.live-hud { display: none; } /* shown once the camera runs: no dead 000 rows before */
+.is-live .live-hud { display: block; }
+.live-hud { position: absolute; left: 12px; right: 12px; bottom: 12px; padding: 12px 14px; border-radius: 10px; background: rgb(13 21 32 / 0.62); backdrop-filter: blur(10px); color: #E5ECF1; }
+.live-hud b { color: #FFFFFF; font-variant-numeric: tabular-nums; }
+/* The therapy voice's words, on screen too; only while a session the visitor started is running. */
+.live-cue { position: absolute; left: 12px; right: 12px; top: 12px; margin: 0; padding: 10px 14px; border-radius: 10px; background: rgb(13 21 32 / 0.72); backdrop-filter: blur(10px); color: #FFFFFF; font-size: 18px; line-height: 1.35; box-shadow: inset 3px 0 0 var(--rose-night); }
+.live-cue[hidden], [data-live-therapy][hidden], [data-live-report][hidden], .live-switches[hidden], .live-chip[hidden] { display: none; }
+/* voice and talk switches: small outlined pills, rose when on */
+.live-switches { display: flex; flex-wrap: wrap; gap: 8px; }
+.live-chip { font: 600 12px/1 var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--mist); background: transparent;
+  border: 1px solid var(--hair-dark-bright); border-radius: 999px; padding: 10px 14px; min-height: 36px; cursor: pointer; }
+.live-chip[aria-pressed="true"] { color: #FFFFFF; border-color: var(--rose-night); box-shadow: inset 0 0 0 1px var(--rose-night); }
+.live-chip:focus-visible { outline: 2px solid var(--rose-night); outline-offset: 3px; }
+@media (pointer: coarse) { .live-chip { min-height: 44px; } }
+.live-link { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
+.live-bars { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 4px; }
+.live-bars li { display: grid; grid-template-columns: 56px 1fr 34px; gap: 8px; align-items: center; font: 600 10px/1 var(--font-mono); letter-spacing: 0.12em; text-transform: uppercase; }
+.live-bars i { display: block; height: 3px; width: 0; background: var(--rose-night); }
+.live-bars b { text-align: right; }
+
+@media (max-width: 900px) {
+  .piece { height: 200vh; }
+  .paper-stage { top: 25%; bottom: auto; left: var(--gutter); right: var(--gutter); width: auto; height: 39%; } /* between the title and the readout */
+  .paper-stage { display: flex; justify-content: center; } /* a flex item's height: 100% resolves; a grid area's didn't */
+  .paper { height: 100%; width: auto; max-width: 100%; }
+  .live-grid { grid-template-columns: 1fr; }
+  .live-stage { justify-self: center; }
+  .piece-col { width: auto; right: var(--gutter); bottom: calc(var(--nav-h) + 24px); }
+  .piece-lede { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; } /* tablets: 3 lines */
+}
+@media (max-width: 560px) { .piece-lede { display: none; } }
+/* Short laptop windows: the title shrinks with the height and the lede gives way before anything overlaps. */
+@media (min-width: 901px) and (max-height: 720px) { .piece-col .piece-lede { display: none; } }
+/* The fence's question needs the room: the lede gives way while it is open. */
+.piece-col:has(.ask:not([hidden])) .piece-lede { display: none; }
+@media (max-width: 560px) {
+  .live-note { align-items: start; padding-top: 18px; font-size: 16px; } /* clear of the HUD on a phone */
+  .hud { width: 200px; }
+  .hud-row { display: none; } /* phones keep the header and today's peak; the rows would cover the fingers */
+}
+
+/* --chrome = focus ring, cursor ring, nav mark (nav.js copies it to <html>): rose-ink on the window, rose-night on night. */
+.hero, .piece { --chrome: var(--rose-ink); }
+.night, .live { --chrome: var(--rose-night); }
+:focus-visible { outline-color: var(--chrome, var(--accent)); }
+.cursor-ring.is-active { border-color: var(--chrome, var(--accent)); }
+.nav-mark i::after { background: var(--chrome, var(--accent)); }
+/* Needle field behind Why: drawn on a canvas under the copy; the facts' void cells cover it. */
+#why > .shell { position: relative; z-index: 1; }
+/* Why: copy on the shared left edge, the three facts stacked in the right column. */
+@media (min-width: 901px) {
+  #why > .shell { width: auto; max-width: none; margin-inline: var(--gutter); padding: 0; display: grid; align-items: center;
+    grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr); column-gap: clamp(48px, 7vw, 160px); }
+  #why > .shell > :not(.facts) { grid-column: 1; }
+  #why .facts { grid-column: 2; grid-row: 1 / span 3; grid-template-columns: 1fr; margin-top: 0; }
+  #why .facts > div { padding: clamp(24px, 3.4vh, 40px) clamp(24px, 2.4vw, 40px); }
+  #why .facts .num { font-size: clamp(48px, 5.2vw, 108px); }
+}
+
+/* A scrim under the bar: text scrolling up fades out instead of running under the brand and links.
+   It steps aside while a seam overlay is showing, so it never paints a band over the transition. */
+.nav::before { content: ''; position: absolute; inset: 0 0 auto; height: calc(100% + 28px); background: linear-gradient(var(--scrim, var(--void)) 45%, transparent); pointer-events: none; transition: opacity 0.2s; }
+html[data-chrome='light'] .nav { --scrim: var(--ground); }
+html:has(.seam[style*='visible']) .nav::before { opacity: 0; }
+.nav-crumb { display: none; } /* the nav pill and each section's gauge already name the section */
+/* The mark sits on frosted glass like the pill, so nothing passing under the bar (seams switch the scrim off) prints over it. */
+.nav-mark { padding: 9px 14px 9px 11px; border-radius: 999px; background: rgb(13 21 32 / 0.9); border: 1px solid var(--hair-dark-bright); } /* solid tint, no backdrop blur: a second blur over the live hero canvas cost a frame bucket at 4x CPU */
+html[data-chrome='light'] .nav-mark { background: rgb(245 248 250 / 0.92); border-color: var(--hair-light); }
+.needle-field { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; border-radius: inherit; }
+
+/* Polish pass (2026-10-21): readable quiet pages, real button feedback, 44 px touch targets. */
+.page .footer-bar { color: var(--muted); font-size: 12px; } /* mist was 1.98:1 on the window ground (A5) */
+.page-bar .nav-mark { translate: none; } /* shares the button's centre line (A17) */
+.cta { transition: transform var(--dur-micro, 140ms) var(--ease-out), filter var(--dur-micro, 140ms); }
+.cta-rose:hover { filter: brightness(1.12); }
+.cta-line:hover { box-shadow: inset 0 0 0 2px var(--ink); }
+.cta:active { transform: scale(0.98); }
+.nav-list a:hover:not(.is-active) { text-decoration: underline; text-underline-offset: 4px; }
+@media (pointer: coarse) {
+  .nav-list a, .nav-mark, .nav-right .cta, .ask-btns .cta { min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center; } /* A10 */
+}

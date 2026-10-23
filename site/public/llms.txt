@@ -1,0 +1,17 @@
+# Flexion
+
+> Your hand therapist's eyes at home. Alexa leads a two-minute hand check by voice while a plain webcam measures how far each finger curls. A change only counts when it leaves the noise band (MDC95), and the routine only moves inside the limits the therapist wrote. A measurement aid, not a diagnosis.
+
+## Sections
+
+- [The reading](/#top): a 21-landmark hand you curl by scrolling, dragging or with the arrow keys
+- [Why](/#why): why home hand exercises go unmeasured
+- [Noise band](/#noise): ten real fists and the band a new reading must leave to count as real change
+- [The fence](/#fence): progression that never passes the therapist's limit (illustration)
+- [The grip](/#grip): putty resistance levels for the grip task
+- [Report](/#report): the weekly one-page PDF for the therapist ([sample](/sample-report.pdf))
+- [Try it live](/#live): the product's own camera engine, in your browser; nothing leaves your device
+
+## More
+
+- [Method](/method.html): how the fist reading, the form guards and the noise band are measured, with the validation numbers and the limits
