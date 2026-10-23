@@ -142,6 +142,16 @@ test("holding: a thin phone held upright counts with only the thumb on it and a 
   assert.equal(holding(pts, [phone]), undefined);
 });
 
+test("holding: the phone wins over the person (and bed) boxes that also surround the hand, whatever their scores", () => {
+  const pts = Array(21).fill([630, 360]);
+  const objects = [ // merge's order: highest score first
+    { name: "person", score: 0.9, box: { x: 300, y: 100, w: 700, h: 620 } },
+    { name: "bed", score: 0.7, box: { x: 0, y: 200, w: 1280, h: 520 } },
+    { name: "cell phone", score: 0.58, box: { x: 600, y: 300, w: 60, h: 120 } },
+  ];
+  assert.equal(holding(pts, objects), "cell phone");
+});
+
 const run = (states) => states.reduce((s, x) => repCounter(s, x), REP_START);
 
 test("repCounter: open → fist → open counts one rep", () => {
