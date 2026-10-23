@@ -1,0 +1,13 @@
+{
+  "name": "flexion-siglip-tools",
+  "private": true,
+  "description": "Builds server/src/identify-labels.json (SigLIP text embeddings for the object list). Dev-only; never deployed.",
+  "type": "module",
+  "license": "Apache-2.0",
+  "scripts": {
+    "labels": "node build-labels.mjs labels.txt ../../server/src/identify-labels.json"
+  },
+  "dependencies": {
+    "@huggingface/transformers": "3.8.1"
+  }
+}
