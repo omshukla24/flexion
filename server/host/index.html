@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Flexion · Echo Show host simulator</title>
+<link rel="stylesheet" href="../app/fonts/fonts.css">
+<link rel="stylesheet" href="../app/tokens.css">
+<link rel="stylesheet" href="host.css">
+</head>
+<body>
+<header class="bar">
+  <span class="label">Echo Show host simulator · an MCP Apps host we built, not real Alexa+</span>
+  <span class="label" id="conn">Connecting…</span>
+</header>
+<main class="sim">
+  <section class="stage" id="stage">
+    <div class="device"><div class="screen" id="screen"><p class="idle" id="idle">Say “check my hand”</p></div></div>
+    <p class="meta label" id="zoomNote"></p>
+    <p class="caption" id="caption" aria-live="polite"></p>
+    <form class="ask" id="ask">
+      <button type="button" class="talk" id="mic">Talk</button>
+      <input id="text" autocomplete="off" aria-label="What you would say to Alexa" placeholder="Type what you’d say, e.g. “check my hand”">
+      <button class="send">Send</button>
+    </form>
+    <div class="row">
+      <button type="button" class="chip" data-say="check my hand">“check my hand”</button>
+      <button type="button" class="chip" data-say="how did I do">“how did I do”</button>
+      <button type="button" class="chip" data-say="make my weekly report">“make my weekly report”</button>
+      <label class="toggle"><input type="checkbox" id="screenOn" checked> Screen on (off = Echo Dot, voice only)</label>
+      <label class="toggle"><input type="checkbox" id="stub"> Scripted hand (no camera)</label>
+    </div>
+    <p class="context" id="context"></p>
+  </section>
+  <aside class="log">
+    <h2 class="label">MCP message log</h2>
+    <ol id="log"></ol>
+  </aside>
+</main>
+<script type="module" src="host.js"></script>
+</body>
+</html>

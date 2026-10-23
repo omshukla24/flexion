@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Flexion coach</title>
+<link rel="stylesheet" href="fonts/fonts.css">
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="coach.css">
+</head>
+<body>
+<main class="coach" id="coach">
+  <header class="banner tape" id="banner" role="status" aria-live="polite">
+    <span class="cue" id="cue">Getting the camera ready…</span>
+    <span class="step" id="step"></span>
+  </header>
+  <section class="video" id="videoBox" aria-label="Camera view">
+    <video id="video" autoplay playsinline muted></video>
+    <canvas id="overlay" aria-hidden="true"></canvas>
+    <p class="note" id="note" hidden></p>
+    <button class="start" id="start" hidden>Start the hand check</button>
+  </section>
+  <aside class="side acrylic" id="side">
+    <span class="label" id="readLabel">Index curl · now</span>
+    <span class="read" id="read">–<small>%</small></span>
+    <svg id="fan" viewBox="0 62 520 172" aria-hidden="true"></svg>
+    <div class="voice-row">
+      <span class="voice" id="voice"><b aria-hidden="true"><i style="height:6px"></i><i style="height:12px"></i><i style="height:9px"></i><i style="height:14px"></i><i style="height:5px"></i></b><span id="said"></span></span>
+      <button class="toggle" id="talkToggle" type="button" aria-pressed="false" title="Talk to the coach: say wait, ready, repeat, slower, skip or stop, or ask a question. Your browser's speech service hears you while this is on." hidden>Talk</button>
+      <button class="toggle" id="voiceToggle" type="button" aria-pressed="true">Voice on</button>
+    </div>
+  </aside>
+  <section class="results acrylic" id="results" aria-live="polite" hidden></section>
+</main>
+<script type="module" src="coach.js"></script>
+</body>
+</html>

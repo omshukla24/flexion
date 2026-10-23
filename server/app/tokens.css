@@ -1,0 +1,122 @@
+/* Flexion design tokens: "Clear Instrument".
+   Shared by the coach app (server/app) and the site (site/). */
+
+:root {
+  color-scheme: light dark;
+
+  /* Palette: morning window light, deep tendon ink, kinesio-tape rose. No red anywhere: patients get care, not alarms. */
+  --ground: #E3EBF0;      /* page */
+  --surface: #F5F8FA;     /* acrylic panels, cards */
+  --ink: #0F1B2D;         /* text, the therapist's fence */
+  --muted: #4A5A6B;       /* secondary text (AA on ground and surface) */
+  --line: #B7C6D1;        /* hairlines, scale ticks */
+  --rose: #E0457B;        /* your motion: needles, fills, large text only */
+  --rose-ink: #B02358;    /* rose as text, button fill (white on it 6.5:1) */
+  --ok: #13774F;          /* real change, step passed */
+  --care: #9A5800;        /* form corrections, flare (text) */
+  --care-fill: #F2B33D;   /* form corrections, flare (fills; ink on it 9.3:1) */
+  --on-rose: #FFFFFF;
+  --acrylic: rgb(245 248 250 / 0.72);   /* clear goniometer panel over video */
+  --acrylic-edge: rgb(255 255 255 / 0.9);
+
+  /* Putty ladder: grip resistance levels, data only (never chrome). */
+  --putty-1: #D9B98C;  /* extra soft, tan */
+  --putty-2: #E9C846;  /* soft */
+  --putty-3: #E07A5F;  /* medium */
+  --putty-4: #5FAE76;  /* firm */
+  --putty-5: #4F7FCF;  /* extra firm */
+
+  /* Scene colours (site, v3). Since v4 (2026-10-21, fewer colours) the site uses only --night and the window
+     ground, with rose as the one accent; teal, mint, lime, tape and sand stay defined for older pages. */
+  --night: #0D1520;       /* preloader, Why, footer */
+  --rose-night: #FF6E9C;  /* rose on night and teal (7.0 / 5.7) */
+  --teal: #0B2B33;        /* 03 The Noise Band: lightbox */
+  --mint: #62E0BD;        /* data and accent on teal (9.2) */
+  --lime: #E6F3B5;        /* 04 The Fence: tape lime; the fence itself stays ink */
+  --tape-blue: #2D6BE0;   /* accent on lime: large text and graphics only (4.2) */
+  --tape-beige: #E8C9A6;  /* tape strips */
+  --sand: #E7DAC2;        /* 06 The Monday Report: clipboard desk; ok/care text only on panels */
+  --putty-mix: 0.5;       /* putty floods mix this much toward the window ground */
+
+  /* Type: a width-axis grotesk that flexes with the hand, and a face built for low-vision legibility. */
+  --font-display: "Anybody", "Atkinson Hyperlegible Next", system-ui, sans-serif;
+  --font-body: "Atkinson Hyperlegible Next", system-ui, sans-serif;
+  --font-mono: "Atkinson Hyperlegible Mono", ui-monospace, monospace;
+  --flex-open: "wdth" 128, "wght" 540;   /* wordmark, hand open */
+  --flex-fist: "wdth" 58, "wght" 860;    /* wordmark, full fist */
+
+  /* App scale: fixed px on the 768x480 Echo Show canvas (the host zooms 1.667x). Banner >= 28px per spec. */
+  --fs-label: 14px;
+  --fs-body: 18px;
+  --fs-cue: 32px;
+  --fs-read: 64px;
+  /* Site scale: fluid. */
+  --fs-site-body: clamp(1.0625rem, 0.98rem + 0.35vw, 1.25rem);
+  --fs-site-h2: clamp(2rem, 1.4rem + 2.6vw, 3.75rem);
+  --fs-site-display: clamp(3.5rem, 1.6rem + 9vw, 11rem);
+  --leading-body: 1.5;
+  --leading-display: 0.95;
+  --tracking-label: 0.06em;
+
+  /* Shape: acrylic is milled with one radius; tape is cut straight. */
+  --r-acrylic: 14px;
+  --r-tight: 4px;
+  --tape-cut: 7px;          /* angled cut at each tape end */
+  --hair: 1px;
+  --needle: 3px;
+
+  /* Motion: only measured things move. One spring family, damping ratio ~0.72 (one soft gauge overshoot), mass 1. */
+  --dur-micro: 140ms;
+  --dur-ui: 260ms;
+  --dur-exit: 200ms;
+  --dur-set: 900ms;         /* the hand curls in, once */
+  --dur-wipe: 1100ms;       /* fist wipe between site scenes */
+  --stagger: 45ms;          /* finger to finger, little finger first */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in: cubic-bezier(0.64, 0, 0.78, 0);
+  --ease-inout: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-curl: cubic-bezier(0.5, 0, 0.2, 1);   /* tendon pull: slow start, firm finish */
+  --spring-press-k: 520;  --spring-press-c: 33;
+  --spring-needle-k: 220; --spring-needle-c: 21.4;
+  --spring-settle-k: 140; --spring-settle-c: 17;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground: #0D1520;
+    --surface: #16222F;
+    --ink: #E5ECF1;
+    --muted: #98A9B9;
+    --line: #2B3B4E;
+    --rose: #FF6E9C;
+    --rose-ink: #FF8DB1;
+    --ok: #4CD3A0;
+    --care: #F2B33D;
+    --on-rose: #0D1520;
+    --acrylic: rgb(22 34 47 / 0.72);
+    --acrylic-edge: rgb(255 255 255 / 0.14);
+  }
+}
+
+:root[data-theme="dark"] {
+  --ground: #0D1520;
+  --surface: #16222F;
+  --ink: #E5ECF1;
+  --muted: #98A9B9;
+  --line: #2B3B4E;
+  --rose: #FF6E9C;
+  --rose-ink: #FF8DB1;
+  --ok: #4CD3A0;
+  --care: #F2B33D;
+  --on-rose: #0D1520;
+  --acrylic: rgb(22 34 47 / 0.72);
+  --acrylic-edge: rgb(255 255 255 / 0.14);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --stagger: 0ms;
+    --dur-set: 1ms;
+    --dur-wipe: 240ms;   /* wipes become crossfades in components */
+  }
+}

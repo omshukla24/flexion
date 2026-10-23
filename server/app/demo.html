@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Flexion Vision</title>
+<style>
+  :root { --bg: #0e0f11; --panel: #17191c; --ink: #e9e6df; --mute: #9a978f; --ok: #5fd38d; --bad: #f06a5f; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.45 system-ui, sans-serif; }
+  header { padding: 14px 18px; display: flex; gap: 16px; align-items: baseline; flex-wrap: wrap; }
+  h1 { font-size: 20px; margin: 0; }
+  #status { color: var(--mute); }
+  #status.fail { color: var(--bad); }
+  main { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 16px; padding: 0 18px 18px; }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+  #stage { position: relative; border-radius: 10px; overflow: hidden; background: #000; align-self: start; }
+  video { width: 100%; display: block; transform: scaleX(-1); } /* selfie view; the overlay mirrors x itself */
+  canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+  aside { display: flex; flex-direction: column; gap: 12px; }
+  .card { background: var(--panel); border-radius: 10px; padding: 12px 14px; }
+  .card h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--mute); margin: 0 0 8px; }
+  .hand { border-left: 4px solid; padding-left: 10px; margin-bottom: 12px; }
+  .big { font-size: 22px; font-weight: 650; }
+  .mute { color: var(--mute); font-size: 13px; }
+  .f { display: grid; grid-template-columns: 52px 1fr 40px; gap: 6px; align-items: center; font-size: 13px; }
+  .bar { height: 6px; background: #2a2d31; border-radius: 3px; overflow: hidden; }
+  .bar i { display: block; height: 100%; background: var(--ok); }
+  label { color: var(--mute); font-size: 13px; }
+</style>
+</head>
+<body>
+<header><h1>Flexion · vision</h1><span id="status">Loading models…</span></header>
+<main>
+  <div id="stage"><video id="video" autoplay playsinline muted></video><canvas id="overlay"></canvas></div>
+  <aside>
+    <div class="card"><h2>Hands</h2><div id="hands">No hands yet. Show one or more hands to the camera.</div></div>
+    <div class="card"><h2>Objects</h2><div id="objects">-</div><label><input type="checkbox" id="people"> show people</label></div>
+    <div class="card"><h2>Speed</h2><div id="speed">-</div></div>
+  </aside>
+</main>
+<script type="module">
+import { createVision } from "./vision.js";
+import { BONES } from "./vision-core.js";
+
+const COLORS = ["#5fd38d", "#f2b84b", "#7fb2ff", "#f06a5f"];
+const $ = (id) => document.getElementById(id);
+const video = $("video"), canvas = $("overlay"), ctx = canvas.getContext("2d");
+let panelT = 0;
+
+function label(text, x, y, col) {
+  const w = ctx.measureText(text).width;
+  ctx.fillStyle = "rgba(0,0,0,.65)"; ctx.fillRect(x - 4, y - 22, w + 8, 28);
+  ctx.fillStyle = col; ctx.fillText(text, x, y);
+}
+
+function draw({ hands, objects }) {
+  const W = canvas.width;
+  const X = ([x, y]) => [W - x, y]; // mirror to match the selfie video
+  ctx.clearRect(0, 0, W, canvas.height);
+  ctx.font = "bold 22px system-ui"; ctx.lineWidth = 3;
+  for (const o of objects) {
+    const x = W - o.box.x - o.box.w;
+    ctx.strokeStyle = "#e9e6df"; ctx.setLineDash([8, 6]); ctx.strokeRect(x, o.box.y, o.box.w, o.box.h); ctx.setLineDash([]);
+    label(`${o.name} ${(o.score * 100).toFixed(0)}%`, x + 4, o.box.y + 26, "#e9e6df");
+  }
+  hands.forEach((h, i) => {
+    const col = COLORS[i % COLORS.length], pts = h.pts.map(X);
+    ctx.strokeStyle = col;
+    for (const [a, b] of BONES) { ctx.beginPath(); ctx.moveTo(...pts[a]); ctx.lineTo(...pts[b]); ctx.stroke(); }
+    ctx.fillStyle = col;
+    for (const [x, y] of pts) ctx.fillRect(x - 3, y - 3, 6, 6);
+    const top = pts.reduce((m, p) => (p[1] < m[1] ? p : m));
+    label(`${h.side} · ${h.state}${h.holding ? ` · holding ${h.holding}` : ""}`, top[0] - 60, top[1] - 16, col);
+  });
+}
+
+function panels({ fps, hands, objects, timing }) {
+  $("hands").innerHTML = !hands.length ? "No hands in view." : hands.map((h, i) => `
+    <div class="hand" style="border-color:${COLORS[i % COLORS.length]}">
+      <div class="big">${h.side} hand · ${h.state}</div>
+      <div class="mute">by ${h.source} · gesture model: ${h.gesture.name} ${(h.gesture.score * 100).toFixed(0)}% · 3D curl: ${h.call3d} (${h.mean4.toFixed(0)}%)</div>
+      <div class="mute">view: ${h.view} · reps: <b style="color:var(--ink)">${h.reps}</b>${h.holding ? ` · holding <b style="color:var(--ink)">${h.holding}</b>` : ""}${h.formIssue ? ` · form: ${h.formIssue}` : ""}</div>
+      ${Object.entries(h.curls).map(([f, v]) => `<div class="f"><span>${f}</span><span class="bar"><i style="width:${v.toFixed(0)}%"></i></span><span>${v.toFixed(0)}%</span></div>`).join("")}
+    </div>`).join("");
+  $("objects").innerHTML = objects.length ? objects.map((o) => `${o.name} <span class="mute">${(o.score * 100).toFixed(0)}%</span>`).join("<br>") : "None in view.";
+  $("speed").textContent = `${fps.toFixed(0)} fps · hands ${timing.handsMs.toFixed(0)} ms · objects ${timing.objectsMs.toFixed(0)} ms (Lite2, every 3 frames, alternating full frame / zoom on hands)`;
+}
+
+function onFrame(r) {
+  if (canvas.width !== video.videoWidth) { canvas.width = video.videoWidth; canvas.height = video.videoHeight; }
+  const shown = { ...r, objects: $("people").checked ? r.objects : r.objects.filter((o) => o.name !== "person") };
+  draw(shown);
+  if (r.t - panelT > 200) { panels(shown); panelT = r.t; }
+}
+
+try {
+  const vision = await createVision({ video, onFrame });
+  $("status").textContent = "Models ready. Starting camera…";
+  await vision.start();
+  $("status").textContent = "Running · up to 4 hands · 80 object types (COCO) · open/fist from any angle · built on vision.js";
+} catch (e) {
+  $("status").textContent = `FAILED: ${e.name || ""} ${e.message || e}`;
+  $("status").className = "fail";
+}
+</script>
+</body>
+</html>
