@@ -1,0 +1,6 @@
+node_modules/
+server/.data/
+server/.data-stub/
+# Private object photos for the identify test
+server/test/fixtures/identify/
+.playwright-cli/
