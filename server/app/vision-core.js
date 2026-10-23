@@ -92,10 +92,13 @@ export function handRegion(handsPts, W, H) {
   return { x: clamp((x0 + x1 - s) / 2, W - s), y: clamp((y0 + y1 - s) / 2, H - s), s };
 }
 
-/** Name of the object whose box (with a 10% margin) holds 3+ grip points of this hand, if any. */
+/** Name of the smallest object whose box (with a 25% margin) holds 2+ grip points of this hand, if any. */
+// A held phone's box is thin: fingers wrap its edges and the palm sits behind it, so 3 points inside a 10% margin never happened.
+// Smallest, not highest-scored: the person's box (and a bed or sofa) always surrounds the hand too, and outscores the phone.
 export function holding(pts, objects) {
-  const inside = ([x, y], b) => { const m = 0.1 * Math.max(b.w, b.h); return x > b.x - m && x < b.x + b.w + m && y > b.y - m && y < b.y + b.h + m; };
-  return objects.find((o) => GRIP_POINTS.filter((i) => inside(pts[i], o.box)).length >= 3)?.name;
+  const inside = ([x, y], b) => { const m = 0.25 * Math.max(b.w, b.h); return x > b.x - m && x < b.x + b.w + m && y > b.y - m && y < b.y + b.h + m; };
+  return objects.filter((o) => GRIP_POINTS.filter((i) => inside(pts[i], o.box)).length >= 2)
+    .sort((a, b) => a.box.w * a.box.h - b.box.w * b.box.h)[0]?.name;
 }
 
 export const REP_START = Object.freeze({ stable: null, candidate: null, count: 0, reps: 0, fromOpen: false });
