@@ -124,11 +124,22 @@ test("handRegion: clamps at the frame edge, caps at the short side, floors tiny 
   assert.equal(handRegion([], 1280, 720), null);
 });
 
-test("holding: 3+ grip points inside an object box (10% margin) name the object", () => {
+test("holding: 2+ grip points inside an object box (25% margin) name the object", () => {
   const pts = Array(21).fill([500, 500]);
   const objects = [{ name: "bottle", box: { x: 480, y: 480, w: 40, h: 40 } }, { name: "book", box: { x: 0, y: 0, w: 10, h: 10 } }];
   assert.equal(holding(pts, objects), "bottle");
   assert.equal(holding(pts, [objects[1]]), undefined);
+});
+
+test("holding: a thin phone held upright counts with only the thumb on it and a fingertip at its edge", () => {
+  const phone = { name: "cell phone", box: { x: 600, y: 300, w: 60, h: 120 } };
+  const pts = Array(21).fill([900, 900]);
+  pts[4] = [630, 360];  // thumb tip on the screen
+  pts[8] = [685, 330];  // index tip wrapped round the far edge
+  pts[12] = [700, 370]; pts[16] = [705, 400]; pts[20] = [700, 430]; pts[9] = [740, 400]; // the rest of the hand behind and beside it
+  assert.equal(holding(pts, [phone]), "cell phone");
+  pts[8] = [700, 330]; // one point alone is not a grip
+  assert.equal(holding(pts, [phone]), undefined);
 });
 
 const run = (states) => states.reduce((s, x) => repCounter(s, x), REP_START);
