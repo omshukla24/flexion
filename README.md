@@ -73,35 +73,95 @@ sequenceDiagram
 | Server | MCP server on Node 22, AWS Lambda, DynamoDB, S3 |
 | Site | Vite, three.js, GSAP, AWS Amplify Hosting |
 
-## Run it
+## Run it yourself
+
+You need Node.js 22.18 or newer, and Chrome or Edge with a webcam for the camera parts.
+
+**1. The MCP server, the coach and the Echo Show simulator**
 
 ```bash
-cd server
+git clone https://github.com/omshukla24/flexion.git
+cd flexion/server
 npm install
 npm test
 npm start
 ```
 
-Open http://127.0.0.1:3001/ for the Echo Show simulator. Tick "Scripted hand" to run a session without a camera.
+- http://127.0.0.1:3001/ opens the Echo Show simulator. Tick "Scripted hand" to run a whole session without a camera,
+  or say or type "check my hand", "how did I do" and "make my weekly report".
+- http://127.0.0.1:3001/app/index.html opens the coach on its own, with your real camera.
+- Sessions are saved as JSON in `server/.data/`.
+- With AWS credentials that can use Amazon Nova 2 Sonic in us-east-1, the simulator lets Sonic pick the tool. Without
+  them it falls back to keyword matching, so everything still runs offline.
+- Optional: point `FLEXION_SIGLIP_MODEL` at the SigLIP vision model
+  (`Xenova/siglip-base-patch16-224`, `onnx/vision_model_quantized.onnx`) to name objects in the grip step on the server.
+
+**2. The site**
 
 ```bash
-cd site
+cd flexion/site
 npm install
+npm test
 npm run dev
 ```
 
-To deploy, run `node scripts/deploy.mjs` from `server/` to see the plan, then again with `--yes`.
+Vite prints the local address. Add `?reduced` to any page to see the reduced-motion version. `npm run build` writes
+`site/dist/`.
 
-## Folders
+**3. Deploy to your own AWS account**
 
-| Folder | What's in it |
-|---|---|
-| `server/src` | MCP server, routine rules, store, weekly PDF |
-| `server/app` | the coach that runs in the browser |
-| `server/host` | the Echo Show simulator |
-| `site` | the public site |
-| `spike/day1` | the first measurement tests and their raw runs |
-| `tools` | scripts that build the object labels and the coach's voice clips |
+Needs the AWS CLI v2 with credentials. The script only prints its plan until you add `--yes`, and it is safe to run
+again.
+
+```bash
+cd flexion/server
+node scripts/deploy.mjs
+node scripts/deploy.mjs --yes
+```
+
+It creates a DynamoDB table and an S3 bucket, the server on AWS Lambda behind a public Function URL, an EventBridge
+ping that keeps it warm, the site on AWS Amplify Hosting, and a $10 a month budget alarm (set `BUDGET_EMAIL`).
+`--server-only` and `--site-only` deploy one half.
+
+## Repository structure
+
+```
+flexion/
+├── server/
+│   ├── src/
+│   │   ├── server.js            # HTTP routes: /mcp, /api/voice, /api/identify, /api/session, /files, /host, /app
+│   │   ├── flexion.js           # MCP tools and the coach app resource
+│   │   ├── routine.js           # routine schema, progression inside the therapist's limits, flare check
+│   │   ├── report.js            # the weekly therapist PDF
+│   │   ├── store.js             # local JSON files, or DynamoDB + S3
+│   │   ├── voice.js             # Amazon Nova 2 Sonic over the bidirectional stream
+│   │   ├── identify.js          # SigLIP image encoder on onnxruntime-node
+│   │   ├── identify-core.js     # label scoring
+│   │   ├── identify-labels.json # 282 label embeddings
+│   │   └── limit.js             # rate limits
+│   ├── app/                     # the coach, runs in the browser
+│   │   ├── vision.js            # MediaPipe models and the camera loop
+│   │   ├── vision-core.js       # finger curl, fist reading, form checks
+│   │   ├── session-core.js      # the session steps, holds and counts
+│   │   ├── speaker.js           # plays the coach's lines one at a time
+│   │   ├── talk.js              # "wait", "it hurts", "slower" and questions during a session
+│   │   ├── session-report.js    # one session's PDF
+│   │   ├── lines.js             # every line the coach can say
+│   │   └── voice/               # the coach's Amazon Polly clips
+│   ├── host/                    # the Echo Show simulator
+│   ├── scripts/                 # deploy, latency check, sample PDFs
+│   └── test/
+├── site/
+│   ├── index.html, method.html, 404.html
+│   ├── src/core/                # scroll, loader, transitions, cursor, navigation
+│   ├── src/scenes/              # hand and dial, noise band, fence, grip putty, report page, live camera
+│   ├── public/                  # fonts, sample PDFs, images
+│   └── tests/
+├── spike/day1/                  # the first measurement tests and their raw runs (data/*.csv)
+└── tools/
+    ├── siglip/                  # builds the label embeddings
+    └── voice/                   # renders the coach's lines with Amazon Polly
+```
 
 ## Note
 
