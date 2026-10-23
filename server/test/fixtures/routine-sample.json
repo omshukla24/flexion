@@ -1,0 +1,11 @@
+{
+  "exercises": [
+    { "id": "fist-open", "name": "Make a fist, then open fully", "sets": 2, "reps": 10, "quote": "Fist and open: 10 times, 2 sets" },
+    { "id": "tendon-glide", "name": "Tendon glides", "sets": 1, "reps": 5, "holdSec": 5, "quote": "Tendon glides x5, hold each position 5 seconds" }
+  ],
+  "limits": { "maxReps": 15, "maxHoldSec": 10, "painStop": true, "other": ["Stop if pain is more than 3 out of 10"] },
+  "gentle": [
+    { "id": "fist-open", "name": "Gentle fist, then open", "sets": 1, "reps": 5, "quote": "On a bad day: 5 gentle fists only" }
+  ],
+  "sourceQuotes": ["Fist and open: 10 times, 2 sets", "Tendon glides x5, hold each position 5 seconds", "Do not go above 15 repetitions", "Stop if pain is more than 3 out of 10"]
+}
