@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Flexion Day-1 spike</title>
+<style>
+  :root { color-scheme: dark; }
+  body { font: 14px/1.45 system-ui, sans-serif; margin: 12px; background: #111; color: #eee; }
+  h1 { font-size: 18px; margin: 0 0 8px; } h2 { font-size: 15px; margin: 14px 0 4px; }
+  #wrap { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start; }
+  #stage { position: relative; width: 640px; max-width: 100%; background: #000; }
+  #stage video, #stage canvas { width: 100%; display: block; transform: scaleX(-1); }
+  #stage canvas { position: absolute; inset: 0; height: 100%; }
+  #panel { flex: 1; min-width: 320px; overflow-x: auto; }
+  table { border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  td, th { border: 1px solid #333; padding: 2px 6px; text-align: right; }
+  th { background: #222; }
+  .pass { color: #6f6; } .fail { color: #f66; } .wait { color: #fc6; }
+  #status { color: #fc6; } input[type=number] { width: 5em; }
+  button, select, input { font: inherit; }
+</style>
+</head>
+<body>
+<h1>Flexion Day-1 spike: hand metrics</h1>
+<p id="status">Loading model…</p>
+<div id="wrap">
+  <div id="stage"><video id="video" autoplay playsinline muted></video><canvas id="overlay"></canvas></div>
+  <div id="panel">
+    <p>
+      Pose <select id="label"><option>auto (open/fist)</option><option>open</option><option>fist</option><option>splint</option><option>partial</option></select>
+      <label><input type="checkbox" id="auto" checked> auto-capture</label>
+      <button id="cap">Capture (Space)</button>
+      <button id="csv">Download CSV</button>
+      <button id="clear">Clear</button>
+    </p>
+    <p>
+      Palm length cm (wrist crease → middle knuckle) <input id="palm" type="number" step="0.1"><br>
+      Ruler cm for next capture (index tip → index knuckle) <input id="ruler" type="number" step="0.1">
+    </p>
+    <pre id="live">-</pre>
+    <h2>Gates</h2><div id="gates"></div>
+    <h2>Stats by pose (ratio of palm length; spread in °)</h2><div id="stats"></div>
+    <h2>Captures</h2><div id="caps"></div>
+  </div>
+</div>
+<script type="module">
+import { FilesetResolver, HandLandmarker } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs";
+
+const MP = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14";
+const MODEL = "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task";
+// finger: [tip, base]. Thumb measures opposition: thumb tip → little-finger knuckle.
+const FINGERS = { thumb: [4, 17], index: [8, 5], middle: [12, 9], ring: [16, 13], little: [20, 17] };
+const KEYS = [...Object.keys(FINGERS), "spread"];
+const BONES = [[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[5,9],[9,10],[10,11],[11,12],[9,13],[13,14],[14,15],[15,16],[13,17],[0,17],[17,18],[18,19],[19,20]];
+const BUF = 20;          // frames in the stability window (~0.7 s at 30 fps)
+const STABLE_SD = 0.02;  // max SD of the mean finger ratio that counts as "holding still"
+const REARM = 0.15;      // pose must change this much (or the hand leave) before the next auto-capture
+const GATE_FPS = 20, GATE_RES = 0.15, GATE_R = 0.9, GATE_MAE = 0.5;
+const SAVE = "flexion-spike-caps-b4"; // new key per build so old runs never mix in
+const MIN_WIDTH = 0.45;  // knuckle width ÷ palm length; below it the hand is turned sideways and the 2D ratios lie (run 1: thumb-up fists read 0.45 vs 0.15)
+const AUTO_OPEN = 0.55, AUTO_FIST = 0.35; // "auto" pose: mean finger ratio above/below these = open/fist; in between is not captured
+const MIN_FIST_THUMB = 0.6; // thumb tip→little knuckle ÷ palm; below it the thumb is tucked inside and the fingers cannot close (run 3: tucked fists read index 0.21–0.35 vs 0.13–0.20)
+
+const $ = (id) => document.getElementById(id);
+const video = $("video"), canvas = $("overlay"), ctx = canvas.getContext("2d");
+const where = self !== top ? `inside iframe ${new URLSearchParams(location.search).get("frame") || ""}` : "top-level page";
+let landmarker, delegate, buf = [], caps = [], armed = true, lastCapFist = null, note = "";
+let frames = 0, fps = 0, inferMs = 0, fpsT = performance.now();
+try { caps = JSON.parse(localStorage.getItem(SAVE)) || []; } catch { /* storage blocked (sandboxed frame): start empty */ }
+
+const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
+const dist3 = (a, b) => Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
+const mean = (xs) => xs.reduce((s, x) => s + x, 0) / xs.length;
+const sd = (xs) => xs.length < 2 ? NaN : Math.sqrt(xs.reduce((s, x) => s + (x - mean(xs)) ** 2, 0) / (xs.length - 1));
+const median = (xs) => { const s = [...xs].sort((a, b) => a - b), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
+// shortcut: SD of repeat trials stands in for SEM; upgrade to ICC-based SEM once real test-retest data exists
+const mdc95 = (xs) => 1.96 * Math.SQRT2 * sd(xs);
+const pearson = (x, y) => { const mx = mean(x), my = mean(y); let n = 0, a = 0, b = 0; x.forEach((xi, i) => { n += (xi - mx) * (y[i] - my); a += (xi - mx) ** 2; b += (y[i] - my) ** 2; }); return n / Math.sqrt(a * b); };
+const biasMae = (x, y) => { const bias = mean(x.map((xi, i) => xi - y[i])); return [bias, mean(x.map((xi, i) => Math.abs(xi - y[i] - bias)))]; };
+const f2 = (x, d = 2) => Number.isFinite(x) ? x.toFixed(d) : "-";
+const palmCm = () => parseFloat($("palm").value) || 0;
+
+function metrics(lm, wl) {
+  const p = lm.map((l) => [l.x * video.videoWidth, l.y * video.videoHeight]);
+  const palm = dist(p[0], p[9]); // wrist → middle knuckle: the scale every ratio is divided by
+  const m = {};
+  for (const [f, [tip, base]] of Object.entries(FINGERS)) {
+    m[f] = dist(p[tip], p[base]) / palm;
+    m[f + "_wcm"] = dist3(wl[tip], wl[base]) * 100;
+  }
+  const a = Math.atan2(p[8][1] - p[5][1], p[8][0] - p[5][0]), b = Math.atan2(p[20][1] - p[17][1], p[20][0] - p[17][0]);
+  m.spread = Math.abs(((a - b) * 180 / Math.PI + 540) % 360 - 180);
+  m.fist = mean(["index", "middle", "ring", "little"].map((f) => m[f]));
+  m.width = dist(p[5], p[17]) / palm;
+  return m;
+}
+
+function capture(how) {
+  if (buf.length < 5) return;
+  const c = { n: caps.length + 1, label: $("label").value, how, t: new Date().toISOString(), hand: buf.at(-1).hand };
+  for (const k of [...KEYS, "fist", "width", ...Object.keys(FINGERS).map((f) => f + "_wcm")]) c[k] = median(buf.map((m) => m[k]));
+  if (c.width < MIN_WIDTH) { note = "NOT CAPTURED: hand turned sideways. Face your palm to the camera."; return; }
+  if (c.label.startsWith("auto")) c.label = c.fist > AUTO_OPEN ? "open" : c.fist < AUTO_FIST ? "fist" : "";
+  if (!c.label) { note = "NOT CAPTURED: half-closed. Fully open or full fist (pick splint/partial in Pose for those)."; return; }
+  if ((c.label === "fist" || c.label === "splint") && c.thumb < MIN_FIST_THUMB) { note = "NOT CAPTURED: thumb tucked inside. Wrap your thumb over the OUTSIDE of your fingers."; return; }
+  note = `Captured #${c.n} as ${c.label}. Take your hand out of frame for the next one.`;
+  const r = parseFloat($("ruler").value);
+  if (Number.isFinite(r)) { c.ruler = r; $("ruler").value = ""; }
+  caps.push(c); armed = false; lastCapFist = c.fist; buf = [];
+  render();
+}
+
+function draw(res) {
+  if (canvas.width !== video.videoWidth) { canvas.width = video.videoWidth; canvas.height = video.videoHeight; }
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  for (const lm of res.landmarks) {
+    const P = lm.map((l) => [l.x * canvas.width, l.y * canvas.height]);
+    ctx.strokeStyle = "#0f8"; ctx.lineWidth = 3;
+    for (const [i, j] of BONES) { ctx.beginPath(); ctx.moveTo(...P[i]); ctx.lineTo(...P[j]); ctx.stroke(); }
+    ctx.fillStyle = "#f0f";
+    for (const [x, y] of P) ctx.fillRect(x - 3, y - 3, 6, 6);
+  }
+}
+
+function showLive(m, stable) {
+  const cm = palmCm();
+  $("live").textContent = `${fps.toFixed(0)} fps · ${inferMs.toFixed(0)} ms/frame · ${m.hand} · ${stable ? "STEADY" : "moving"}${armed ? "" : " (re-form the pose to re-arm)"}\n` +
+    Object.keys(FINGERS).map((f) => `${f.padEnd(6)} ${f2(m[f])} × palm${cm ? ` = ${f2(m[f] * cm, 1)} cm` : ""} · world ${f2(m[f + "_wcm"], 1)} cm`).join("\n") +
+    `\nspread ${f2(m.spread, 0)}° · palm facing ${f2(m.width)} (need ≥ ${MIN_WIDTH})\n${note}`;
+}
+
+// Runs once per real camera frame: rAF ran at the monitor rate (~200 Hz), which shrank the steady window to ~0.1 s.
+function loop() {
+  const t0 = performance.now();
+  const res = landmarker.detectForVideo(video, t0);
+  inferMs = performance.now() - t0;
+  frames++;
+  draw(res);
+  if (res.landmarks.length) {
+    const m = metrics(res.landmarks[0], res.worldLandmarks[0]);
+    m.hand = res.handedness[0][0].categoryName;
+    buf.push(m);
+    if (buf.length > BUF) buf.shift();
+    if (lastCapFist !== null && Math.abs(m.fist - lastCapFist) > REARM) armed = true;
+    const stable = buf.length === BUF && sd(buf.map((x) => x.fist)) < STABLE_SD;
+    if ($("auto").checked && armed && stable) capture("auto");
+    showLive(m, stable);
+  } else { buf = []; armed = true; $("live").textContent = "no hand"; }
+  const now = performance.now();
+  if (now - fpsT > 1000) { fps = frames * 1000 / (now - fpsT); frames = 0; fpsT = now; renderGates(); }
+  video.requestVideoFrameCallback(loop);
+}
+
+const byLabel = (l) => caps.filter((c) => c.label === l);
+const gate = (name, state, detail) => `<div class="${state}">${{ pass: "PASS", fail: "FAIL", wait: "…" }[state]} ${name}: ${detail}</div>`;
+
+function renderGates() {
+  const g = [gate("G1 speed", fps >= GATE_FPS ? "pass" : fps ? "fail" : "wait", `${fps.toFixed(0)} fps (need ≥ ${GATE_FPS}) · ${inferMs.toFixed(0)} ms/frame · ${delegate} · ${where}`)];
+  const open = byLabel("open").map((c) => c.index), fist = byLabel("fist").map((c) => c.index), spl = byLabel("splint").map((c) => c.index);
+  if (fist.length >= 5 && open.length >= 3) {
+    const res = mdc95(fist) / (mean(open) - mean(fist));
+    g.push(gate("G2 repeatability", res <= GATE_RES ? "pass" : "fail", `index MDC95 ${f2(mdc95(fist), 3)} = ${f2(res * 100, 0)}% of the open→fist range (need ≤ ${GATE_RES * 100}%)`));
+  } else g.push(gate("G2 repeatability", "wait", `need ≥ 5 fist and ≥ 3 open captures (have ${fist.length} / ${open.length})`));
+  if (fist.length >= 5 && spl.length >= 3) {
+    const delta = mean(spl) - mean(fist), m = mdc95(fist);
+    g.push(gate("G3 splint detection", delta > m ? "pass" : "fail", `index Δ ${f2(delta, 3)} vs fist MDC95 ${f2(m, 3)} (need Δ > MDC95)`));
+  } else g.push(gate("G3 splint detection", "wait", `need ≥ 5 fist and ≥ 3 splint captures (have ${fist.length} / ${spl.length})`));
+  const rc = caps.filter((c) => Number.isFinite(c.ruler));
+  if (rc.length >= 5) {
+    const r = rc.map((c) => c.ruler), cm = palmCm();
+    const fits = [["world", rc.map((c) => c.index_wcm)], ...(cm ? [["calibrated", rc.map((c) => c.index * cm)]] : [])]
+      .map(([name, x]) => { const [bias, mae] = biasMae(x, r); return { name, r: pearson(x, r), bias, mae }; });
+    const ok = fits.some((f) => f.r >= GATE_R && f.mae <= GATE_MAE);
+    g.push(gate("G4 ruler agreement", ok ? "pass" : "fail", fits.map((f) => `${f.name}: r ${f2(f.r)}, bias ${f2(f.bias, 1)} cm, MAE after bias ${f2(f.mae, 2)} cm`).join(" · ") + ` (need r ≥ ${GATE_R}, MAE ≤ ${GATE_MAE} cm)`));
+  } else g.push(gate("G4 ruler agreement", "wait", `need ≥ 5 captures with a ruler value (have ${rc.length})`));
+  $("gates").innerHTML = g.join("");
+}
+
+function renderStats() {
+  const rows = ["open", "fist", "splint", "partial"].map((l) => [l, byLabel(l)]).filter(([, cs]) => cs.length);
+  $("stats").innerHTML = !rows.length ? "No captures yet." :
+    `<table><tr><th>pose</th><th>n</th>${KEYS.map((k) => `<th>${k}</th><th>SD</th><th>MDC95</th>`).join("")}</tr>` +
+    rows.map(([l, cs]) => `<tr><td>${l}</td><td>${cs.length}</td>${KEYS.map((k) => { const xs = cs.map((c) => c[k]); return `<td>${f2(mean(xs))}</td><td>${f2(sd(xs), 3)}</td><td>${f2(mdc95(xs), 3)}</td>`; }).join("")}</tr>`).join("") + "</table>";
+}
+
+function renderCaps() {
+  const cm = palmCm();
+  $("caps").innerHTML = !caps.length ? "" :
+    `<table><tr><th>#</th><th>pose</th><th>how</th><th>hand</th>${Object.keys(FINGERS).map((f) => `<th>${f}</th>`).join("")}<th>spread°</th><th>index cm cal</th><th>index cm world</th><th>ruler</th></tr>` +
+    caps.slice().reverse().map((c) => `<tr><td>${c.n}</td><td>${c.label}</td><td>${c.how}</td><td>${c.hand}</td>${Object.keys(FINGERS).map((f) => `<td>${f2(c[f])}</td>`).join("")}<td>${f2(c.spread, 0)}</td><td>${cm ? f2(c.index * cm, 1) : "-"}</td><td>${f2(c.index_wcm, 1)}</td><td>${c.ruler ?? "-"}</td></tr>`).join("") + "</table>";
+}
+
+function render() {
+  try { localStorage.setItem(SAVE, JSON.stringify(caps)); } catch { /* storage blocked: data lives until reload */ }
+  renderStats(); renderCaps(); renderGates();
+}
+
+$("cap").onclick = () => capture("manual");
+$("clear").onclick = () => { if (confirm("Delete all captures?")) { caps = []; render(); } };
+$("palm").oninput = render;
+$("csv").onclick = () => {
+  if (!caps.length) return;
+  const cols = [...new Set(caps.flatMap(Object.keys))];
+  const csv = [cols.join(","), ...caps.map((c) => cols.map((k) => c[k] ?? "").join(","))].join("\n");
+  const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(new Blob([csv], { type: "text/csv" })), download: `flexion-spike-${Date.now()}.csv` });
+  a.click();
+};
+addEventListener("keydown", (e) => { if (e.code === "Space" && e.target.tagName !== "INPUT") { e.preventDefault(); capture("manual"); } });
+
+try {
+  const fileset = await FilesetResolver.forVisionTasks(`${MP}/wasm`);
+  const make = (d) => HandLandmarker.createFromOptions(fileset, { baseOptions: { modelAssetPath: MODEL, delegate: d }, runningMode: "VIDEO", numHands: 1 });
+  landmarker = await make("GPU").then((l) => (delegate = "GPU", l), () => (delegate = "CPU", make("CPU")));
+  video.srcObject = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 } });
+  await video.play();
+  $("status").textContent = `Running (${where}) · BUILD 4: auto open/fist + sideways + thumb-outside guards.`;
+  render();
+  loop();
+} catch (e) {
+  $("status").textContent = `FAILED (${where}): ${e.name || ""} ${e.message || e}`;
+  $("status").className = "fail";
+}
+</script>
+</body>
+</html>

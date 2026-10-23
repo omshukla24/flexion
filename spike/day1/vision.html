@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Flexion Vision</title>
+<style>
+  :root { --bg: #0e0f11; --panel: #17191c; --ink: #e9e6df; --mute: #9a978f; --ok: #5fd38d; --warn: #f2b84b; --bad: #f06a5f; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.45 system-ui, sans-serif; }
+  header { padding: 14px 18px; display: flex; gap: 16px; align-items: baseline; flex-wrap: wrap; }
+  h1 { font-size: 20px; margin: 0; }
+  #status { color: var(--mute); }
+  #status.fail { color: var(--bad); }
+  main { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 16px; padding: 0 18px 18px; }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+  #stage { position: relative; border-radius: 10px; overflow: hidden; background: #000; align-self: start; }
+  video { width: 100%; display: block; transform: scaleX(-1); } /* selfie view; the overlay mirrors x itself */
+  canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+  aside { display: flex; flex-direction: column; gap: 12px; }
+  .card { background: var(--panel); border-radius: 10px; padding: 12px 14px; }
+  .card h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--mute); margin: 0 0 8px; }
+  .hand { border-left: 4px solid; padding-left: 10px; margin-bottom: 12px; }
+  .big { font-size: 22px; font-weight: 650; }
+  .mute { color: var(--mute); font-size: 13px; }
+  .f { display: grid; grid-template-columns: 52px 1fr 40px; gap: 6px; align-items: center; font-size: 13px; }
+  .bar { height: 6px; background: #2a2d31; border-radius: 3px; overflow: hidden; }
+  .bar i { display: block; height: 100%; background: var(--ok); }
+  label { color: var(--mute); font-size: 13px; }
+</style>
+</head>
+<body>
+<header><h1>Flexion · vision</h1><span id="status">Loading models…</span></header>
+<main>
+  <div id="stage"><video id="video" autoplay playsinline muted></video><canvas id="overlay"></canvas></div>
+  <aside>
+    <div class="card"><h2>Hands</h2><div id="hands">No hands yet. Show one or more hands to the camera.</div></div>
+    <div class="card"><h2>Objects</h2><div id="objects">-</div><label><input type="checkbox" id="people"> show people</label></div>
+    <div class="card"><h2>Speed</h2><div id="speed">-</div></div>
+  </aside>
+</main>
+<script type="module">
+import { FilesetResolver, GestureRecognizer, ObjectDetector } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs";
+
+const MP = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14";
+const GESTURE_MODEL = "https://storage.googleapis.com/mediapipe-models/gesture_recognizer/gesture_recognizer/float16/1/gesture_recognizer.task";
+// Lite2 (448 px input) over Lite0 (320 px): Lite0 found a held phone ~1% of the time and never a book.
+const OBJECT_MODEL = "https://storage.googleapis.com/mediapipe-models/object_detector/efficientdet_lite2/float16/1/efficientdet_lite2.tflite";
+const CROP_PX = 448, CROP_SCALE = 2.2, MIN_CROP = 160; // zoom pass: square around the hands, 2.2× their size, fed at the model's input size
+const MAX_HANDS = 4;
+const OBJECT_EVERY = 3;                 // the object model is heavier: run it on every 3rd camera frame (~10 fps)
+const OPEN_BELOW = 25, FIST_ABOVE = 65; // mean finger curl % for the 3D open / fist call
+const GESTURE_TRUST = 0.6;              // below this score the trained gesture model defers to the 3D call
+// [chain of landmark ids, degrees of flexion summed over its joints at full curl]
+const FINGERS = { thumb: [[1, 2, 3, 4], 120], index: [[0, 5, 6, 7, 8], 260], middle: [[0, 9, 10, 11, 12], 260], ring: [[0, 13, 14, 15, 16], 260], little: [[0, 17, 18, 19, 20], 260] };
+const BONES = [[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[5,9],[9,10],[10,11],[11,12],[9,13],[13,14],[14,15],[15,16],[13,17],[0,17],[17,18],[18,19],[19,20]];
+const COLORS = ["#5fd38d", "#f2b84b", "#7fb2ff", "#f06a5f"];
+const GESTURES = { Closed_Fist: "Fist", Open_Palm: "Open", Pointing_Up: "Pointing", Thumb_Up: "Thumb up", Thumb_Down: "Thumb down", Victory: "Victory", ILoveYou: "I love you", None: "-" };
+const GRIP_POINTS = [4, 8, 12, 16, 20, 9]; // fingertips + palm centre; 3+ inside an object box = holding it
+
+const $ = (id) => document.getElementById(id);
+const video = $("video"), canvas = $("overlay"), ctx = canvas.getContext("2d");
+let gestures, objects, objDelegate, frame = 0, lastObjects = [], hands = [], objPass = 0, fullObjects = [], handObjects = [];
+const crop = Object.assign(document.createElement("canvas"), { width: CROP_PX, height: CROP_PX }), cropCtx = crop.getContext("2d");
+let frames = 0, fps = 0, fpsT = performance.now(), gestMs = 0, objMs = 0, panelT = 0;
+const reps = {}, lastState = {};
+
+const sub = (a, b) => [a.x - b.x, a.y - b.y, a.z - b.z];
+const cross = (u, v) => [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]];
+const norm = (u) => Math.hypot(...u);
+const angle = (u, v) => Math.acos(Math.max(-1, Math.min(1, (u[0] * v[0] + u[1] * v[1] + u[2] * v[2]) / (norm(u) * norm(v))))) * 180 / Math.PI;
+
+// Flexion summed over a finger's joints, from 3D world landmarks: does not depend on which way the hand faces.
+function curls(wl) {
+  const out = {};
+  for (const [f, [chain, full]] of Object.entries(FINGERS)) {
+    let deg = 0;
+    for (let i = 1; i < chain.length - 1; i++) deg += angle(sub(wl[chain[i]], wl[chain[i - 1]]), sub(wl[chain[i + 1]], wl[chain[i]]));
+    out[f] = Math.min(100, 100 * deg / full);
+  }
+  return out;
+}
+
+// How squarely the palm plane faces the camera: |z of the palm normal|.
+function view(wl) {
+  const n = cross(sub(wl[5], wl[0]), sub(wl[17], wl[0]));
+  const r = Math.abs(n[2]) / norm(n);
+  return r > 0.7 ? "flat to camera" : r > 0.35 ? "angled" : "side-on";
+}
+
+function analyse(res) {
+  const W = canvas.width, H = canvas.height;
+  return res.landmarks.map((lm, i) => {
+    const c = curls(res.worldLandmarks[i]);
+    const mean4 = (c.index + c.middle + c.ring + c.little) / 4;
+    const call3d = mean4 < OPEN_BELOW ? "Open" : mean4 > FIST_ABOVE ? "Fist" : "Partial";
+    const g = res.gestures[i]?.[0], gName = GESTURES[g?.categoryName] ?? "-";
+    const trusted = g && g.score >= GESTURE_TRUST && gName !== "-"; // any confident gesture wins; 3D curl only knows open/partial/fist
+    const pts = lm.map((l) => [W - l.x * W, l.y * H]); // mirrored to match the selfie video
+    const holding = lastObjects.find((o) => GRIP_POINTS.filter((p) => inside(pts[p], o.box)).length >= 3)?.name;
+    return { side: res.handedness[i]?.[0]?.categoryName ?? "?", pts, curls: c, mean4, call3d, gName, gScore: g?.score ?? 0,
+             state: trusted ? gName : call3d, source: trusted ? "gesture model" : "3D curl", view: view(res.worldLandmarks[i]), holding };
+  });
+}
+
+function inside([x, y], b) { const m = 0.1 * Math.max(b.w, b.h); return x > b.x - m && x < b.x + b.w + m && y > b.y - m && y < b.y + b.h + m; }
+
+function countReps(hs) {
+  for (const h of hs) {
+    if (h.state !== "Open" && h.state !== "Fist") continue;
+    if (lastState[h.side] === "Fist" && h.state === "Open") reps[h.side] = (reps[h.side] || 0) + 1;
+    lastState[h.side] = h.state;
+  }
+}
+
+// Square around every hand in view, in unmirrored video pixels; null when no hands.
+function handRegion() {
+  if (!hands.length) return null;
+  const W = video.videoWidth, H = video.videoHeight;
+  const xs = hands.flatMap((h) => h.pts.map(([x]) => W - x)), ys = hands.flatMap((h) => h.pts.map(([, y]) => y));
+  const [x0, x1, y0, y1] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
+  const s = Math.min(H, W, CROP_SCALE * Math.max(x1 - x0, y1 - y0, MIN_CROP));
+  const clamp = (v, hi) => Math.max(0, Math.min(hi, v));
+  return { x: clamp((x0 + x1 - s) / 2, W - s), y: clamp((y0 + y1 - s) / 2, H - s), s };
+}
+
+const detect = (src, t, ox, oy, k) => objects.detectForVideo(src, t).detections.map((d) => ({ name: d.categories[0].categoryName, score: d.categories[0].score,
+  b: { x: ox + d.boundingBox.originX * k, y: oy + d.boundingBox.originY * k, w: d.boundingBox.width * k, h: d.boundingBox.height * k } }));
+const iou = (a, b) => { const ix = Math.max(0, Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x)), iy = Math.max(0, Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y)); return ix * iy / (a.w * a.h + b.w * b.h - ix * iy); };
+// Highest score first; drop a lower-scored box of the same object that overlaps it (the zoom and full passes often both see it).
+const merge = (os) => os.sort((a, b) => b.score - a.score).filter((o, i, all) => !all.slice(0, i).some((p) => p.name === o.name && iou(p.b, o.b) > 0.3));
+
+// Alternates a full-frame pass with a zoomed pass around the hands, so a held object gets ~4× the pixels.
+function runObjects(t) {
+  const t0 = performance.now(), W = video.videoWidth;
+  const r = ++objPass % 2 ? handRegion() : null;
+  if (r) {
+    cropCtx.drawImage(video, r.x, r.y, r.s, r.s, 0, 0, CROP_PX, CROP_PX);
+    handObjects = detect(crop, t, r.x, r.y, r.s / CROP_PX);
+  } else {
+    fullObjects = detect(video, t, 0, 0, 1);
+    if (!hands.length) handObjects = [];
+  }
+  lastObjects = merge([...handObjects, ...fullObjects])
+    .filter((o) => $("people").checked || o.name !== "person")
+    .map((o) => ({ name: o.name, score: o.score, box: { x: W - o.b.x - o.b.w, y: o.b.y, w: o.b.w, h: o.b.h } }));
+  objMs = performance.now() - t0;
+}
+
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.font = "bold 22px system-ui"; ctx.lineWidth = 3;
+  for (const o of lastObjects) {
+    ctx.strokeStyle = "#e9e6df"; ctx.setLineDash([8, 6]); ctx.strokeRect(o.box.x, o.box.y, o.box.w, o.box.h); ctx.setLineDash([]);
+    label(`${o.name} ${(o.score * 100).toFixed(0)}%`, o.box.x + 4, o.box.y + 26, "#e9e6df");
+  }
+  hands.forEach((h, i) => {
+    const col = COLORS[i % COLORS.length];
+    ctx.strokeStyle = col;
+    for (const [a, b] of BONES) { ctx.beginPath(); ctx.moveTo(...h.pts[a]); ctx.lineTo(...h.pts[b]); ctx.stroke(); }
+    ctx.fillStyle = col;
+    for (const [x, y] of h.pts) ctx.fillRect(x - 3, y - 3, 6, 6);
+    const top = h.pts.reduce((m, p) => (p[1] < m[1] ? p : m));
+    label(`${h.side} · ${h.state}${h.holding ? ` · holding ${h.holding}` : ""}`, top[0] - 60, top[1] - 16, col);
+  });
+}
+
+function label(text, x, y, col) {
+  const w = ctx.measureText(text).width;
+  ctx.fillStyle = "rgba(0,0,0,.65)"; ctx.fillRect(x - 4, y - 22, w + 8, 28);
+  ctx.fillStyle = col; ctx.fillText(text, x, y);
+}
+
+function panels() {
+  $("hands").innerHTML = !hands.length ? "No hands in view." : hands.map((h, i) => `
+    <div class="hand" style="border-color:${COLORS[i % COLORS.length]}">
+      <div class="big">${h.side} hand · ${h.state}</div>
+      <div class="mute">by ${h.source} · gesture model: ${h.gName} ${(h.gScore * 100).toFixed(0)}% · 3D curl: ${h.call3d} (${h.mean4.toFixed(0)}%)</div>
+      <div class="mute">view: ${h.view} · reps (open→fist→open): <b style="color:var(--ink)">${reps[h.side] || 0}</b>${h.holding ? ` · holding <b style="color:var(--ink)">${h.holding}</b>` : ""}</div>
+      ${Object.entries(h.curls).map(([f, v]) => `<div class="f"><span>${f}</span><span class="bar"><i style="width:${v.toFixed(0)}%"></i></span><span>${v.toFixed(0)}%</span></div>`).join("")}
+    </div>`).join("");
+  $("objects").innerHTML = lastObjects.length ? lastObjects.map((o) => `${o.name} <span class="mute">${(o.score * 100).toFixed(0)}%</span>`).join("<br>") : "None in view.";
+  $("speed").innerHTML = `${fps.toFixed(0)} fps · hands ${gestMs.toFixed(0)} ms · objects ${objMs.toFixed(0)} ms (${objDelegate}, Lite2, every ${OBJECT_EVERY} frames, alternating full frame / zoom on hands)`;
+}
+
+function loop() {
+  if (canvas.width !== video.videoWidth) { canvas.width = video.videoWidth; canvas.height = video.videoHeight; }
+  const t = performance.now();
+  if (++frame % OBJECT_EVERY === 0) runObjects(t);
+  const t0 = performance.now();
+  hands = analyse(gestures.recognizeForVideo(video, t0 + 0.01));
+  gestMs = performance.now() - t0;
+  countReps(hands);
+  draw();
+  frames++;
+  if (t - fpsT > 1000) { fps = frames * 1000 / (t - fpsT); frames = 0; fpsT = t; }
+  if (t - panelT > 200) { panels(); panelT = t; }
+  video.requestVideoFrameCallback(loop);
+}
+
+try {
+  const fileset = await FilesetResolver.forVisionTasks(`${MP}/wasm`);
+  gestures = await GestureRecognizer.createFromOptions(fileset, { baseOptions: { modelAssetPath: GESTURE_MODEL, delegate: "GPU" }, runningMode: "VIDEO", numHands: MAX_HANDS });
+  const makeObj = (d) => ObjectDetector.createFromOptions(fileset, { baseOptions: { modelAssetPath: OBJECT_MODEL, delegate: d }, runningMode: "VIDEO", scoreThreshold: 0.3, maxResults: 10 });
+  objects = await makeObj("GPU").then((o) => (objDelegate = "GPU", o), () => (objDelegate = "CPU", makeObj("CPU")));
+  $("status").textContent = "Models ready. Starting camera…";
+  video.srcObject = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 } });
+  await video.play();
+  $("status").textContent = `Running · up to ${MAX_HANDS} hands · 80 object types (COCO) · open/fist from any angle`;
+  loop();
+} catch (e) {
+  $("status").textContent = `FAILED: ${e.name || ""} ${e.message || e}`;
+  $("status").className = "fail";
+}
+</script>
+</body>
+</html>

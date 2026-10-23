@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Flexion iframe camera test</title>
+<style>
+  :root { color-scheme: dark; }
+  body { font: 14px/1.45 system-ui, sans-serif; margin: 12px; background: #111; color: #eee; }
+  iframe { width: 100%; height: 900px; border: 1px solid #444; background: #000; }
+  button { font: inherit; }
+</style>
+</head>
+<body>
+<p>Mimics an MCP Apps host, which renders <code>ui://</code> HTML in a sandboxed iframe.
+A = <code>sandbox="allow-scripts allow-same-origin"</code>, B = <code>sandbox="allow-scripts"</code> (opaque origin, the stricter case). Both get <code>allow="camera"</code>.
+Pass = the frame's status line says "Running" and G1 shows fps.</p>
+<button onclick="load('A')">Load A</button> <button onclick="load('B')">Load B</button>
+<iframe id="f" title="Hand metrics in a sandboxed frame"></iframe>
+<script>
+  function load(kind) {
+    const f = document.getElementById("f");
+    f.setAttribute("allow", "camera");
+    f.setAttribute("sandbox", kind === "A" ? "allow-scripts allow-same-origin" : "allow-scripts");
+    f.src = `hand.html?frame=${kind}&t=${Date.now()}`;
+  }
+</script>
+</body>
+</html>
